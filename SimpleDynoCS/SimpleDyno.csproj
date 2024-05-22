@@ -1,0 +1,66 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows10.0.22621.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
+    <StartupObject>SimpleDyno.Program</StartupObject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.VisualBasic" Version="10.3.0" />
+    <PackageReference Include="System.IO.Ports" Version="8.0.0" />
+    <PackageReference Include="System.Management" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Resources.Designer.cs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Update="Analysis.resx">
+      
+    </EmbeddedResource>
+    <EmbeddedResource Update="COM.resx">
+      
+    </EmbeddedResource>
+    <EmbeddedResource Update="Correction.resx">
+      
+    </EmbeddedResource>
+    <EmbeddedResource Update="Dyno.resx">
+      
+    </EmbeddedResource>
+    <EmbeddedResource Update="Fit.resx">
+      
+    </EmbeddedResource>
+    <EmbeddedResource Update="Resources.resx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Generator>PublicResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+    <EmbeddedResource Update="SimpleDyno.resx">
+      
+    </EmbeddedResource>
+    <EmbeddedResource Update="SimpleDynoSubForm.resx">
+      
+    </EmbeddedResource>
+    <EmbeddedResource Update="SimpleDynoSubGauge.resx">
+      
+    </EmbeddedResource>
+    <EmbeddedResource Update="SimpleDynoSubLabel.resx">
+      
+    </EmbeddedResource>
+    <EmbeddedResource Update="SimpleDynoSubMultiYTimeGraph.resx">
+      
+    </EmbeddedResource>
+  </ItemGroup>
+
+</Project>
