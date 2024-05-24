@@ -686,34 +686,152 @@ namespace SimpleDyno
                         case var @case when @case == SimpleDyno.PowerRunVersion:
                         case "POWER_RUN_6_3":
                         case "POWER_RUN_6_4": // This is a valid current version file
+                        {
+                            OverlayFileCount += 1;
+                            if (OverlayFileCount == MAXDATAFILES)
                             {
-                                OverlayFileCount += 1;
-                                if (OverlayFileCount == MAXDATAFILES)
+                                btnAddOverlayFile.Enabled = false;
+                                SimpleDyno.FrmFit.chkAddOrNew.Checked = false;
+                                SimpleDyno.FrmFit.chkAddOrNew.Enabled = false;
+                            }
+                            OverlayFiles[OverlayFileCount] = OpenFileDialog1.FileName.Substring(OpenFileDialog1.FileName.LastIndexOf(@"\") + 1);
+                            do
+                                temp = withBlock1.ReadLine();
+                            while (!temp.StartsWith("NUMBER_OF_POINTS_FIT"));
+                            AnalyzedData[OverlayFileCount, SimpleDyno.SESSIONTIME, 0] = Conversions.ToDouble(temp.Substring(temp.LastIndexOf(" "))); // used the empty holder to remember the number of fit points
+                            temp = withBlock1.ReadLine(); // starting
+
+                            string ColumnTitles;
+                            string[] TitlesSplit;
+                            string SearchString;
+                            string[] DataLine;
+                            string[] UnitName;
+                            int ParamCount;
+                            int ParamPosition;
+
+                            ColumnTitles = withBlock1.ReadLine(); // titles
+                            TitlesSplit = Strings.Split(ColumnTitles, " ");
+
+                            var loopTo = (int)Math.Round(AnalyzedData[OverlayFileCount, SimpleDyno.SESSIONTIME, 0]);
+                            for (PointCount = 1; PointCount <= loopTo; PointCount++)
+                            {
+                                DataLine = Strings.Split(withBlock1.ReadLine(), " "); // reads all the values on this line into a string array
+                                for (ParamCount = 0; ParamCount <= SimpleDyno.LAST - 1; ParamCount++)
                                 {
-                                    btnAddOverlayFile.Enabled = false;
-                                    SimpleDyno.frmFit.chkAddOrNew.Checked = false;
-                                    SimpleDyno.frmFit.chkAddOrNew.Enabled = false;
+                                    // This is how the titles are created in the fitting code except we do not add the space
+                                    UnitName = Strings.Split(SimpleDyno.DataUnitTags[ParamCount], " ");
+                                    SearchString = SimpleDyno.DataTags[ParamCount].Replace(" ", "_") + "_(" + UnitName[0] + ")";
+                                    ParamPosition = Array.IndexOf(TitlesSplit, SearchString);
+                                    if (ParamPosition != -1)
+                                    {
+                                        AnalyzedData[OverlayFileCount, ParamCount, PointCount] = Conversions.ToDouble(DataLine[ParamPosition]);
+                                    }
                                 }
-                                OverlayFiles[OverlayFileCount] = OpenFileDialog1.FileName.Substring(OpenFileDialog1.FileName.LastIndexOf(@"\") + 1);
-                                do
+                            }
+
+                            break;
+                        }
+                        case var case1 when case1 == "POWER_CURVE_6_0": // These were the earlier beta testing versions for uno
+                        {
+                            // There are a number of different versions carrying this heading
+                            // Main differences between these and 6.3+ versions are no "_" between parameter and unit and Watts in was called Watts_(e)
+                            Interaction.MsgBox("A copy of " + OpenFileDialog1.FileName + " will be saved as a new version .sdp file.", Constants.vbOKOnly);
+                            // Convert old data to new data
+                            // open the copy file
+                            Program.MainI.SetMouseBusy_ThreadSafe(this);
+                            CopyFileName = OpenFileDialog1.FileName.Substring(0, OpenFileDialog1.FileName.Length - 4) + ".sdp";
+                            DataCopyfile = new StreamWriter(CopyFileName);
+                            DataCopyfile.WriteLine(SimpleDyno.PowerRunVersion);
+                            DataCopyfile.WriteLine(CopyFileName);
+                            // load it up as if it were a version 6 file
+                            OverlayFileCount += 1;
+                            if (OverlayFileCount == MAXDATAFILES)
+                            {
+                                btnAddOverlayFile.Enabled = false;
+                                SimpleDyno.FrmFit.chkAddOrNew.Checked = false;
+                                SimpleDyno.FrmFit.chkAddOrNew.Enabled = false;
+                            }
+                            OverlayFiles[OverlayFileCount] = CopyFileName.Substring(CopyFileName.LastIndexOf(@"\") + 1);
+                            // Now read through the lines and copy them to the new file
+                            double temprollerdiameter;
+                            double tempwheeldiameter;
+                            double tempgearratio;
+                            temp = withBlock1.ReadLine(); // original file name line
+                            do
+                            {
+                                temp = withBlock1.ReadLine();
+                                DataCopyfile.WriteLine(temp);
+                                // while we are at it - look for roller dia, wheel dia and gear ratio
+                                if (temp.LastIndexOf(" ") != -1)
+                                {
+                                    // Debug.Print(temp & temp.LastIndexOf(" "))
+                                    if (temp.Split(' ')[1] == "Gear_Ratio:")
+                                        tempgearratio = Conversions.ToDouble(temp.Split(' ')[2]);
+                                    if (temp.Split(' ')[1] == "Wheel_Diameter:")
+                                        tempwheeldiameter = Conversions.ToDouble(temp.Split(' ')[2]);
+                                    if (temp.Split(' ')[1] == "Roller_Diameter:")
+                                        temprollerdiameter = Conversions.ToDouble(temp.Split(' ')[2]);
+                                }
+                            }
+                            // Loop Until temp.LastIndexOf("Target_Roller_Mass") <> -1 'this takes us to the end of the old headings
+                            while (temp != "PRIMARY_CHANNEL_CURVE_FIT_DATA");
+                            // line that holds the number of datapoints
+                            temp = withBlock1.ReadLine();
+                            DataCopyfile.WriteLine(temp);
+                            AnalyzedData[OverlayFileCount, SimpleDyno.SESSIONTIME, 0] = Conversions.ToDouble(temp.Substring(temp.LastIndexOf(" ")));
+                            // line that holds the starting point
+                            temp = withBlock1.ReadLine();
+                            DataCopyfile.WriteLine(temp);
+
+                            string ColumnTitles;
+                            string[] TitlesSplit;
+                            string SearchString;
+                            string[] DataLine;
+                            string[] UnitName;
+                            int ParamCount;
+                            int ParamPosition;
+
+                            ColumnTitles = withBlock1.ReadLine(); // titles
+                                                                    // now depending on the title line, difference approaches are required.
+                                                                    // First substitute the "Watts_(e)" string to the current "Watts In" string including the splitter "_"
+                            if (ColumnTitles.Contains("Point") && ColumnTitles.Contains("SystemTime")) // this is an early beta version.
+                            {
+                                var loopTo1 = (int)Math.Round(AnalyzedData[OverlayFileCount, SimpleDyno.SESSIONTIME, 0]);
+                                for (PointCount = 1; PointCount <= loopTo1; PointCount++)
+                                {
                                     temp = withBlock1.ReadLine();
-                                while (!temp.StartsWith("NUMBER_OF_POINTS_FIT"));
-                                AnalyzedData[OverlayFileCount, SimpleDyno.SESSIONTIME, 0] = Conversions.ToDouble(temp.Substring(temp.LastIndexOf(" "))); // used the empty holder to remember the number of fit points
-                                temp = withBlock1.ReadLine(); // starting
+                                    line = temp.Split(' ');
+                                    AnalyzedData[OverlayFileCount, SimpleDyno.SESSIONTIME, PointCount] = Conversions.ToDouble(line[1]);
+                                    AnalyzedData[OverlayFileCount, SimpleDyno.RPM1_ROLLER, PointCount] = Conversions.ToDouble(line[6]); // / Main.DataUnits(Main.RPM1_ROLLER, 1) 'convert old RPM to new rad/s
+                                    AnalyzedData[OverlayFileCount, SimpleDyno.RPM1_WHEEL, PointCount] = Conversions.ToDouble(line[7]); // / Main.DataUnits(Main.RPM1_ROLLER, 1) 'convert old RPM to new rad/s
+                                    AnalyzedData[OverlayFileCount, SimpleDyno.RPM1_MOTOR, PointCount] = Conversions.ToDouble(line[8]); // / Main.DataUnits(Main.RPM1_ROLLER, 1) 'convert old RPM to new rad/s
+                                    AnalyzedData[OverlayFileCount, SimpleDyno.RPM2, PointCount] = Conversions.ToDouble(line[10]);
+                                    AnalyzedData[OverlayFileCount, SimpleDyno.RPM2_RATIO, PointCount] = Conversions.ToDouble(line[11]);
+                                    AnalyzedData[OverlayFileCount, SimpleDyno.RPM2_ROLLOUT, PointCount] = Conversions.ToDouble(line[12]);
+                                    AnalyzedData[OverlayFileCount, SimpleDyno.SPEED, PointCount] = Conversions.ToDouble(line[15]); // / Main.DataUnits(Main.SPEED, 1) 'convert old MPH to new m/s
+                                    AnalyzedData[OverlayFileCount, SimpleDyno.TORQUE_ROLLER, PointCount] = Conversions.ToDouble(line[18]); // already in N.m
+                                    AnalyzedData[OverlayFileCount, SimpleDyno.TORQUE_WHEEL, PointCount] = Conversions.ToDouble(line[19]); // AnalyzedData(OverlayFileCount, Main.POWER, PointCount) * (tempwheeldiameter / temprollerdiameter)
+                                    AnalyzedData[OverlayFileCount, SimpleDyno.TORQUE_MOTOR, PointCount] = Conversions.ToDouble(line[20]); // AnalyzedData(OverlayFileCount, Main.TORQUE_WHEEL, PointCount) / tempgearratio
+                                    AnalyzedData[OverlayFileCount, SimpleDyno.POWER, PointCount] = Conversions.ToDouble(line[30]);
+                                    AnalyzedData[OverlayFileCount, SimpleDyno.DRAG, PointCount] = Conversions.ToDouble(line[33]);
+                                    AnalyzedData[OverlayFileCount, SimpleDyno.VOLTS, PointCount] = Conversions.ToDouble(line[36]);
+                                    AnalyzedData[OverlayFileCount, SimpleDyno.AMPS, PointCount] = Conversions.ToDouble(line[39]);
+                                    AnalyzedData[OverlayFileCount, SimpleDyno.WATTS_IN, PointCount] = Conversions.ToDouble(line[40]);
+                                    AnalyzedData[OverlayFileCount, SimpleDyno.EFFICIENCY, PointCount] = Conversions.ToDouble(line[42]);
+                                    AnalyzedData[OverlayFileCount, SimpleDyno.TEMPERATURE1, PointCount] = Conversions.ToDouble(line[43]);
+                                    // Everything else is going to be '0'
+                                }
+                            }
+                            else // It looks more like the current version, but not quite.
+                            {
+                                ColumnTitles = ColumnTitles.Replace("Watts_(e)", "Watts_In");
+                                // No replace all "(" at the beginning of the units with "_("
+                                ColumnTitles = ColumnTitles.Replace("(", "_(");
 
-                                string ColumnTitles;
-                                string[] TitlesSplit;
-                                string SearchString;
-                                string[] DataLine;
-                                string[] UnitName;
-                                int ParamCount;
-                                int ParamPosition;
-
-                                ColumnTitles = withBlock1.ReadLine(); // titles
                                 TitlesSplit = Strings.Split(ColumnTitles, " ");
 
-                                var loopTo = (int)Math.Round(AnalyzedData[OverlayFileCount, SimpleDyno.SESSIONTIME, 0]);
-                                for (PointCount = 1; PointCount <= loopTo; PointCount++)
+                                var loopTo2 = (int)Math.Round(AnalyzedData[OverlayFileCount, SimpleDyno.SESSIONTIME, 0]);
+                                for (PointCount = 1; PointCount <= loopTo2; PointCount++)
                                 {
                                     DataLine = Strings.Split(withBlock1.ReadLine(), " "); // reads all the values on this line into a string array
                                     for (ParamCount = 0; ParamCount <= SimpleDyno.LAST - 1; ParamCount++)
@@ -728,275 +846,157 @@ namespace SimpleDyno
                                         }
                                     }
                                 }
-
-                                break;
                             }
-                        case var case1 when case1 == "POWER_CURVE_6_0": // These were the earlier beta testing versions for uno
+                            // Now write all of the analyzed data to the datacopy file as if it were a power run
+                            // write the new heading line
+                            string tempstring = "";
+                            string[] tempsplit;
+                            for (ParamCount = 0; ParamCount <= SimpleDyno.LAST - 1; ParamCount++)
                             {
-                                // There are a number of different versions carrying this heading
-                                // Main differences between these and 6.3+ versions are no "_" between parameter and unit and Watts in was called Watts_(e)
-                                Interaction.MsgBox("A copy of " + OpenFileDialog1.FileName + " will be saved as a new version .sdp file.", Constants.vbOKOnly);
-                                // Convert old data to new data
-                                // open the copy file
-                                Program.MainI.SetMouseBusy_ThreadSafe(this);
-                                CopyFileName = OpenFileDialog1.FileName.Substring(0, OpenFileDialog1.FileName.Length - 4) + ".sdp";
-                                DataCopyfile = new StreamWriter(CopyFileName);
-                                DataCopyfile.WriteLine(SimpleDyno.PowerRunVersion);
-                                DataCopyfile.WriteLine(CopyFileName);
-                                // load it up as if it were a version 6 file
-                                OverlayFileCount += 1;
-                                if (OverlayFileCount == MAXDATAFILES)
-                                {
-                                    btnAddOverlayFile.Enabled = false;
-                                    SimpleDyno.frmFit.chkAddOrNew.Checked = false;
-                                    SimpleDyno.frmFit.chkAddOrNew.Enabled = false;
-                                }
-                                OverlayFiles[OverlayFileCount] = CopyFileName.Substring(CopyFileName.LastIndexOf(@"\") + 1);
-                                // Now read through the lines and copy them to the new file
-                                double temprollerdiameter;
-                                double tempwheeldiameter;
-                                double tempgearratio;
-                                temp = withBlock1.ReadLine(); // original file name line
-                                do
-                                {
-                                    temp = withBlock1.ReadLine();
-                                    DataCopyfile.WriteLine(temp);
-                                    // while we are at it - look for roller dia, wheel dia and gear ratio
-                                    if (temp.LastIndexOf(" ") != -1)
-                                    {
-                                        // Debug.Print(temp & temp.LastIndexOf(" "))
-                                        if (temp.Split(' ')[1] == "Gear_Ratio:")
-                                            tempgearratio = Conversions.ToDouble(temp.Split(' ')[2]);
-                                        if (temp.Split(' ')[1] == "Wheel_Diameter:")
-                                            tempwheeldiameter = Conversions.ToDouble(temp.Split(' ')[2]);
-                                        if (temp.Split(' ')[1] == "Roller_Diameter:")
-                                            temprollerdiameter = Conversions.ToDouble(temp.Split(' ')[2]);
-                                    }
-                                }
-                                // Loop Until temp.LastIndexOf("Target_Roller_Mass") <> -1 'this takes us to the end of the old headings
-                                while (temp != "PRIMARY_CHANNEL_CURVE_FIT_DATA");
-                                // line that holds the number of datapoints
-                                temp = withBlock1.ReadLine();
-                                DataCopyfile.WriteLine(temp);
-                                AnalyzedData[OverlayFileCount, SimpleDyno.SESSIONTIME, 0] = Conversions.ToDouble(temp.Substring(temp.LastIndexOf(" ")));
-                                // line that holds the starting point
-                                temp = withBlock1.ReadLine();
-                                DataCopyfile.WriteLine(temp);
-
-                                string ColumnTitles;
-                                string[] TitlesSplit;
-                                string SearchString;
-                                string[] DataLine;
-                                string[] UnitName;
-                                int ParamCount;
-                                int ParamPosition;
-
-                                ColumnTitles = withBlock1.ReadLine(); // titles
-                                                                      // now depending on the title line, difference approaches are required.
-                                                                      // First substitute the "Watts_(e)" string to the current "Watts In" string including the splitter "_"
-                                if (ColumnTitles.Contains("Point") && ColumnTitles.Contains("SystemTime")) // this is an early beta version.
-                                {
-                                    var loopTo1 = (int)Math.Round(AnalyzedData[OverlayFileCount, SimpleDyno.SESSIONTIME, 0]);
-                                    for (PointCount = 1; PointCount <= loopTo1; PointCount++)
-                                    {
-                                        temp = withBlock1.ReadLine();
-                                        line = temp.Split(' ');
-                                        AnalyzedData[OverlayFileCount, SimpleDyno.SESSIONTIME, PointCount] = Conversions.ToDouble(line[1]);
-                                        AnalyzedData[OverlayFileCount, SimpleDyno.RPM1_ROLLER, PointCount] = Conversions.ToDouble(line[6]); // / Main.DataUnits(Main.RPM1_ROLLER, 1) 'convert old RPM to new rad/s
-                                        AnalyzedData[OverlayFileCount, SimpleDyno.RPM1_WHEEL, PointCount] = Conversions.ToDouble(line[7]); // / Main.DataUnits(Main.RPM1_ROLLER, 1) 'convert old RPM to new rad/s
-                                        AnalyzedData[OverlayFileCount, SimpleDyno.RPM1_MOTOR, PointCount] = Conversions.ToDouble(line[8]); // / Main.DataUnits(Main.RPM1_ROLLER, 1) 'convert old RPM to new rad/s
-                                        AnalyzedData[OverlayFileCount, SimpleDyno.RPM2, PointCount] = Conversions.ToDouble(line[10]);
-                                        AnalyzedData[OverlayFileCount, SimpleDyno.RPM2_RATIO, PointCount] = Conversions.ToDouble(line[11]);
-                                        AnalyzedData[OverlayFileCount, SimpleDyno.RPM2_ROLLOUT, PointCount] = Conversions.ToDouble(line[12]);
-                                        AnalyzedData[OverlayFileCount, SimpleDyno.SPEED, PointCount] = Conversions.ToDouble(line[15]); // / Main.DataUnits(Main.SPEED, 1) 'convert old MPH to new m/s
-                                        AnalyzedData[OverlayFileCount, SimpleDyno.TORQUE_ROLLER, PointCount] = Conversions.ToDouble(line[18]); // already in N.m
-                                        AnalyzedData[OverlayFileCount, SimpleDyno.TORQUE_WHEEL, PointCount] = Conversions.ToDouble(line[19]); // AnalyzedData(OverlayFileCount, Main.POWER, PointCount) * (tempwheeldiameter / temprollerdiameter)
-                                        AnalyzedData[OverlayFileCount, SimpleDyno.TORQUE_MOTOR, PointCount] = Conversions.ToDouble(line[20]); // AnalyzedData(OverlayFileCount, Main.TORQUE_WHEEL, PointCount) / tempgearratio
-                                        AnalyzedData[OverlayFileCount, SimpleDyno.POWER, PointCount] = Conversions.ToDouble(line[30]);
-                                        AnalyzedData[OverlayFileCount, SimpleDyno.DRAG, PointCount] = Conversions.ToDouble(line[33]);
-                                        AnalyzedData[OverlayFileCount, SimpleDyno.VOLTS, PointCount] = Conversions.ToDouble(line[36]);
-                                        AnalyzedData[OverlayFileCount, SimpleDyno.AMPS, PointCount] = Conversions.ToDouble(line[39]);
-                                        AnalyzedData[OverlayFileCount, SimpleDyno.WATTS_IN, PointCount] = Conversions.ToDouble(line[40]);
-                                        AnalyzedData[OverlayFileCount, SimpleDyno.EFFICIENCY, PointCount] = Conversions.ToDouble(line[42]);
-                                        AnalyzedData[OverlayFileCount, SimpleDyno.TEMPERATURE1, PointCount] = Conversions.ToDouble(line[43]);
-                                        // Everything else is going to be '0'
-                                    }
-                                }
-                                else // It looks more like the current version, but not quite.
-                                {
-                                    ColumnTitles = ColumnTitles.Replace("Watts_(e)", "Watts_In");
-                                    // No replace all "(" at the beginning of the units with "_("
-                                    ColumnTitles = ColumnTitles.Replace("(", "_(");
-
-                                    TitlesSplit = Strings.Split(ColumnTitles, " ");
-
-                                    var loopTo2 = (int)Math.Round(AnalyzedData[OverlayFileCount, SimpleDyno.SESSIONTIME, 0]);
-                                    for (PointCount = 1; PointCount <= loopTo2; PointCount++)
-                                    {
-                                        DataLine = Strings.Split(withBlock1.ReadLine(), " "); // reads all the values on this line into a string array
-                                        for (ParamCount = 0; ParamCount <= SimpleDyno.LAST - 1; ParamCount++)
-                                        {
-                                            // This is how the titles are created in the fitting code except we do not add the space
-                                            UnitName = Strings.Split(SimpleDyno.DataUnitTags[ParamCount], " ");
-                                            SearchString = SimpleDyno.DataTags[ParamCount].Replace(" ", "_") + "_(" + UnitName[0] + ")";
-                                            ParamPosition = Array.IndexOf(TitlesSplit, SearchString);
-                                            if (ParamPosition != -1)
-                                            {
-                                                AnalyzedData[OverlayFileCount, ParamCount, PointCount] = Conversions.ToDouble(DataLine[ParamPosition]);
-                                            }
-                                        }
-                                    }
-                                }
-                                // Now write all of the analyzed data to the datacopy file as if it were a power run
-                                // write the new heading line
-                                string tempstring = "";
-                                string[] tempsplit;
-                                for (ParamCount = 0; ParamCount <= SimpleDyno.LAST - 1; ParamCount++)
-                                {
-                                    tempsplit = Strings.Split(SimpleDyno.DataUnitTags[ParamCount], " ");
-                                    tempstring = tempstring + SimpleDyno.DataTags[ParamCount].Replace(" ", "_") + "_(" + tempsplit[0] + ") ";
-                                }
-                                // Write the column headings
-                                DataCopyfile.WriteLine(tempstring);
-                                // now write out the new file format
-                                var loopTo3 = (int)Math.Round(AnalyzedData[OverlayFileCount, SimpleDyno.SESSIONTIME, 0]);
-                                for (PointCount = 1; PointCount <= loopTo3; PointCount++)
-                                {
-                                    tempstring = ""; // count.ToString & " "
-                                    for (ParamCount = 0; ParamCount <= SimpleDyno.LAST - 1; ParamCount++) // CHECK - time is now the last column which will mess up the overlay routine .
-                                    {
-                                        tempsplit = Strings.Split(SimpleDyno.DataUnitTags[ParamCount], " "); // How many units are there
-                                        tempstring = tempstring + AnalyzedData[OverlayFileCount, ParamCount, PointCount] * SimpleDyno.DataUnits[ParamCount, 0] + " "; // DataTags(paramcount).Replace(" ", "_") & "(" & tempsplit(unitcount) & ") "
-                                    }
-                                    // ...and write it
-                                    DataCopyfile.WriteLine(tempstring);
-                                }
-                                DataCopyfile.WriteLine(Constants.vbCrLf);
-                                while (!withBlock1.EndOfStream)
-                                {
-                                    temp = withBlock1.ReadLine();
-                                    DataCopyfile.WriteLine(temp);
-                                }
-                                DataCopyfile.Close();
-                                Program.MainI.SetMouseNormal_ThreadSafe(this);
-                                break;
+                                tempsplit = Strings.Split(SimpleDyno.DataUnitTags[ParamCount], " ");
+                                tempstring = tempstring + SimpleDyno.DataTags[ParamCount].Replace(" ", "_") + "_(" + tempsplit[0] + ") ";
                             }
+                            // Write the column headings
+                            DataCopyfile.WriteLine(tempstring);
+                            // now write out the new file format
+                            var loopTo3 = (int)Math.Round(AnalyzedData[OverlayFileCount, SimpleDyno.SESSIONTIME, 0]);
+                            for (PointCount = 1; PointCount <= loopTo3; PointCount++)
+                            {
+                                tempstring = ""; // count.ToString & " "
+                                for (ParamCount = 0; ParamCount <= SimpleDyno.LAST - 1; ParamCount++) // CHECK - time is now the last column which will mess up the overlay routine .
+                                {
+                                    tempsplit = Strings.Split(SimpleDyno.DataUnitTags[ParamCount], " "); // How many units are there
+                                    tempstring = tempstring + AnalyzedData[OverlayFileCount, ParamCount, PointCount] * SimpleDyno.DataUnits[ParamCount, 0] + " "; // DataTags(paramcount).Replace(" ", "_") & "(" & tempsplit(unitcount) & ") "
+                                }
+                                // ...and write it
+                                DataCopyfile.WriteLine(tempstring);
+                            }
+                            DataCopyfile.WriteLine(Constants.vbCrLf);
+                            while (!withBlock1.EndOfStream)
+                            {
+                                temp = withBlock1.ReadLine();
+                                DataCopyfile.WriteLine(temp);
+                            }
+                            DataCopyfile.Close();
+                            Program.MainI.SetMouseNormal_ThreadSafe(this);
+                            break;
+                        }
                         case var case2 when case2 == "POWER_CURVE": // We are assuming that this is a SD 5.5 Power Run File.
+                        {
+                            Interaction.MsgBox("A copy of " + OpenFileDialog1.FileName + " will be saved as a new version .sdp file.", Constants.vbOKOnly);
+                            // Convert old data to new data
+                            // open the copy file
+                            Program.MainI.SetMouseBusy_ThreadSafe(this);
+                            CopyFileName = OpenFileDialog1.FileName.Substring(0, OpenFileDialog1.FileName.Length - 4) + ".sdp";
+                            DataCopyfile = new StreamWriter(CopyFileName);
+                            DataCopyfile.WriteLine(SimpleDyno.PowerRunVersion);
+                            DataCopyfile.WriteLine(CopyFileName);
+                            // load it up as if it were a version 6 file
+                            OverlayFileCount += 1;
+                            if (OverlayFileCount == MAXDATAFILES)
                             {
-                                Interaction.MsgBox("A copy of " + OpenFileDialog1.FileName + " will be saved as a new version .sdp file.", Constants.vbOKOnly);
-                                // Convert old data to new data
-                                // open the copy file
-                                Program.MainI.SetMouseBusy_ThreadSafe(this);
-                                CopyFileName = OpenFileDialog1.FileName.Substring(0, OpenFileDialog1.FileName.Length - 4) + ".sdp";
-                                DataCopyfile = new StreamWriter(CopyFileName);
-                                DataCopyfile.WriteLine(SimpleDyno.PowerRunVersion);
-                                DataCopyfile.WriteLine(CopyFileName);
-                                // load it up as if it were a version 6 file
-                                OverlayFileCount += 1;
-                                if (OverlayFileCount == MAXDATAFILES)
-                                {
-                                    btnAddOverlayFile.Enabled = false;
-                                    SimpleDyno.frmFit.chkAddOrNew.Checked = false;
-                                    SimpleDyno.frmFit.chkAddOrNew.Enabled = false;
-                                }
-                                OverlayFiles[OverlayFileCount] = CopyFileName.Substring(CopyFileName.LastIndexOf(@"\") + 1);
-                                // Now read through the lines and copy them to the new file
-                                var temprollerdiameter = default(double);
-                                var tempwheeldiameter = default(double);
-                                var tempgearratio = default(double);
-                                temp = withBlock1.ReadLine(); // original file name line
-                                do
-                                {
-                                    temp = withBlock1.ReadLine();
-                                    DataCopyfile.WriteLine(temp);
-                                    // while we are at it - look for roller dia, wheel dia and gear ratio
-                                    if (temp.LastIndexOf(" ") != -1)
-                                    {
-                                        // Debug.Print(temp & temp.LastIndexOf(" "))
-                                        if (temp.Split(' ')[1] == "Gear_Ratio:")
-                                            tempgearratio = Conversions.ToDouble(temp.Split(' ')[2]);
-                                        if (temp.Split(' ')[1] == "Wheel_Diameter:")
-                                            tempwheeldiameter = Conversions.ToDouble(temp.Split(' ')[2]);
-                                        if (temp.Split(' ')[1] == "Roller_Diameter:")
-                                            temprollerdiameter = Conversions.ToDouble(temp.Split(' ')[2]);
-                                    }
-                                }
-                                // Loop Until temp.LastIndexOf("Target_Roller_Mass") <> -1 'this takes us to the end of the old headings
-                                while (temp != "PRIMARY_CHANNEL_CURVE_FIT_DATA");
-                                // line that holds the number of datapoints
-                                temp = withBlock1.ReadLine();
-                                DataCopyfile.WriteLine(temp);
-                                AnalyzedData[OverlayFileCount, SimpleDyno.SESSIONTIME, 0] = Conversions.ToDouble(temp.Substring(temp.LastIndexOf(" ")));
-                                // line that holds the starting point
-                                temp = withBlock1.ReadLine();
-                                DataCopyfile.WriteLine(temp);
-                                // next is the original heading line which we will discard
-                                temp = withBlock1.ReadLine();
-                                // write the new heading line
-                                string tempstring = "";
-                                string[] tempsplit;
-                                int paramcount;
-                                for (paramcount = 0; paramcount <= SimpleDyno.LAST - 1; paramcount++)
-                                {
-                                    tempsplit = Strings.Split(SimpleDyno.DataUnitTags[paramcount], " ");
-                                    tempstring = tempstring + SimpleDyno.DataTags[paramcount].Replace(" ", "_") + "_(" + tempsplit[0] + ") ";
-                                }
-                                // Write the column headings
-                                DataCopyfile.WriteLine(tempstring);
-                                // now read in all of the fit data 
-                                var loopTo4 = (int)Math.Round(AnalyzedData[OverlayFileCount, SimpleDyno.SESSIONTIME, 0]);
-                                for (PointCount = 1; PointCount <= loopTo4; PointCount++)
-                                {
-                                    temp = withBlock1.ReadLine();
-                                    line = temp.Split(' ');
-                                    // This is the old line format
-                                    // Point Time RollerRPM WheelRPM MotorRPM SpeedMPH SpeedKPH PowerWatts PowerHP TorqueNm Torqueinoz Torquecmg DragWatts DragHP
-                                    // 1    2     3         4         5        6       7         8         9       10          11       12       13        14
-                                    // This is the new line format
-                                    // Time(Sec) RPM1_Roller(rad/s) RPM1_Wheel(rad/s) RPM1_Motor(rad/s) Speed(m/s) RPM2(rad/s) Ratio(M/W) Rollout(mm) Roller_Torque(N.m) Wheel_Torque(N.m) Motor_Torque(N.m) Power(W) Drag(W) Voltage(V) Current(A) Watts_(e)(W) Efficiency(%) Temperature(°C) 
-                                    // So...
-                                    AnalyzedData[OverlayFileCount, SimpleDyno.SESSIONTIME, PointCount] = Conversions.ToDouble(line[1]);
-                                    AnalyzedData[OverlayFileCount, SimpleDyno.RPM1_ROLLER, PointCount] = Conversions.ToDouble(line[2]) / SimpleDyno.DataUnits[SimpleDyno.RPM1_ROLLER, 1]; // convert old RPM to new rad/s
-                                    AnalyzedData[OverlayFileCount, SimpleDyno.RPM1_WHEEL, PointCount] = Conversions.ToDouble(line[3]) / SimpleDyno.DataUnits[SimpleDyno.RPM1_ROLLER, 1]; // convert old RPM to new rad/s
-                                    AnalyzedData[OverlayFileCount, SimpleDyno.RPM1_MOTOR, PointCount] = Conversions.ToDouble(line[4]) / SimpleDyno.DataUnits[SimpleDyno.RPM1_ROLLER, 1]; // convert old RPM to new rad/s
-                                    AnalyzedData[OverlayFileCount, SimpleDyno.SPEED, PointCount] = Conversions.ToDouble(line[5]) / SimpleDyno.DataUnits[SimpleDyno.SPEED, 1]; // convert old MPH to new m/s
-                                    AnalyzedData[OverlayFileCount, SimpleDyno.TORQUE_ROLLER, PointCount] = Conversions.ToDouble(line[9]); // already in N.m
-                                    AnalyzedData[OverlayFileCount, SimpleDyno.POWER, PointCount] = Conversions.ToDouble(line[7]);
-                                    AnalyzedData[OverlayFileCount, SimpleDyno.DRAG, PointCount] = Conversions.ToDouble(line[12]);
-                                    // recalc the motor and wheel torques
-                                    AnalyzedData[OverlayFileCount, SimpleDyno.TORQUE_WHEEL, PointCount] = AnalyzedData[OverlayFileCount, SimpleDyno.POWER, PointCount] * (tempwheeldiameter / temprollerdiameter);
-                                    AnalyzedData[OverlayFileCount, SimpleDyno.TORQUE_MOTOR, PointCount] = AnalyzedData[OverlayFileCount, SimpleDyno.TORQUE_WHEEL, PointCount] / tempgearratio;
-                                    // Everything else is going to be '0'
-                                }
-                                // now write out the new file format
-                                var loopTo5 = (int)Math.Round(AnalyzedData[OverlayFileCount, SimpleDyno.SESSIONTIME, 0]);
-                                for (PointCount = 1; PointCount <= loopTo5; PointCount++)
-                                {
-                                    tempstring = ""; // count.ToString & " "
-                                    for (paramcount = 0; paramcount <= SimpleDyno.LAST - 1; paramcount++) // CHECK - time is now the last column which will mess up the overlay routine .
-                                    {
-                                        tempsplit = Strings.Split(SimpleDyno.DataUnitTags[paramcount], " "); // How many units are there
-                                        tempstring = tempstring + AnalyzedData[OverlayFileCount, paramcount, PointCount] * SimpleDyno.DataUnits[paramcount, 0] + " "; // DataTags(paramcount).Replace(" ", "_") & "(" & tempsplit(unitcount) & ") "
-                                    }
-                                    // ...and write it
-                                    DataCopyfile.WriteLine(tempstring);
-                                }
-                                DataCopyfile.WriteLine(Constants.vbCrLf);
-                                while (!withBlock1.EndOfStream)
-                                {
-                                    temp = withBlock1.ReadLine();
-                                    DataCopyfile.WriteLine(temp);
-                                }
-                                DataCopyfile.Close();
-                                Program.MainI.SetMouseNormal_ThreadSafe(this);
-                                break;
+                                btnAddOverlayFile.Enabled = false;
+                                SimpleDyno.FrmFit.chkAddOrNew.Checked = false;
+                                SimpleDyno.FrmFit.chkAddOrNew.Enabled = false;
                             }
+                            OverlayFiles[OverlayFileCount] = CopyFileName.Substring(CopyFileName.LastIndexOf(@"\") + 1);
+                            // Now read through the lines and copy them to the new file
+                            var temprollerdiameter = default(double);
+                            var tempwheeldiameter = default(double);
+                            var tempgearratio = default(double);
+                            temp = withBlock1.ReadLine(); // original file name line
+                            do
+                            {
+                                temp = withBlock1.ReadLine();
+                                DataCopyfile.WriteLine(temp);
+                                // while we are at it - look for roller dia, wheel dia and gear ratio
+                                if (temp.LastIndexOf(" ") != -1)
+                                {
+                                    // Debug.Print(temp & temp.LastIndexOf(" "))
+                                    if (temp.Split(' ')[1] == "Gear_Ratio:")
+                                        tempgearratio = Conversions.ToDouble(temp.Split(' ')[2]);
+                                    if (temp.Split(' ')[1] == "Wheel_Diameter:")
+                                        tempwheeldiameter = Conversions.ToDouble(temp.Split(' ')[2]);
+                                    if (temp.Split(' ')[1] == "Roller_Diameter:")
+                                        temprollerdiameter = Conversions.ToDouble(temp.Split(' ')[2]);
+                                }
+                            }
+                            // Loop Until temp.LastIndexOf("Target_Roller_Mass") <> -1 'this takes us to the end of the old headings
+                            while (temp != "PRIMARY_CHANNEL_CURVE_FIT_DATA");
+                            // line that holds the number of datapoints
+                            temp = withBlock1.ReadLine();
+                            DataCopyfile.WriteLine(temp);
+                            AnalyzedData[OverlayFileCount, SimpleDyno.SESSIONTIME, 0] = Conversions.ToDouble(temp.Substring(temp.LastIndexOf(" ")));
+                            // line that holds the starting point
+                            temp = withBlock1.ReadLine();
+                            DataCopyfile.WriteLine(temp);
+                            // next is the original heading line which we will discard
+                            temp = withBlock1.ReadLine();
+                            // write the new heading line
+                            string tempstring = "";
+                            string[] tempsplit;
+                            int paramcount;
+                            for (paramcount = 0; paramcount <= SimpleDyno.LAST - 1; paramcount++)
+                            {
+                                tempsplit = Strings.Split(SimpleDyno.DataUnitTags[paramcount], " ");
+                                tempstring = tempstring + SimpleDyno.DataTags[paramcount].Replace(" ", "_") + "_(" + tempsplit[0] + ") ";
+                            }
+                            // Write the column headings
+                            DataCopyfile.WriteLine(tempstring);
+                            // now read in all of the fit data 
+                            var loopTo4 = (int)Math.Round(AnalyzedData[OverlayFileCount, SimpleDyno.SESSIONTIME, 0]);
+                            for (PointCount = 1; PointCount <= loopTo4; PointCount++)
+                            {
+                                temp = withBlock1.ReadLine();
+                                line = temp.Split(' ');
+                                // This is the old line format
+                                // Point Time RollerRPM WheelRPM MotorRPM SpeedMPH SpeedKPH PowerWatts PowerHP TorqueNm Torqueinoz Torquecmg DragWatts DragHP
+                                // 1    2     3         4         5        6       7         8         9       10          11       12       13        14
+                                // This is the new line format
+                                // Time(Sec) RPM1_Roller(rad/s) RPM1_Wheel(rad/s) RPM1_Motor(rad/s) Speed(m/s) RPM2(rad/s) Ratio(M/W) Rollout(mm) Roller_Torque(N.m) Wheel_Torque(N.m) Motor_Torque(N.m) Power(W) Drag(W) Voltage(V) Current(A) Watts_(e)(W) Efficiency(%) Temperature(°C) 
+                                // So...
+                                AnalyzedData[OverlayFileCount, SimpleDyno.SESSIONTIME, PointCount] = Conversions.ToDouble(line[1]);
+                                AnalyzedData[OverlayFileCount, SimpleDyno.RPM1_ROLLER, PointCount] = Conversions.ToDouble(line[2]) / SimpleDyno.DataUnits[SimpleDyno.RPM1_ROLLER, 1]; // convert old RPM to new rad/s
+                                AnalyzedData[OverlayFileCount, SimpleDyno.RPM1_WHEEL, PointCount] = Conversions.ToDouble(line[3]) / SimpleDyno.DataUnits[SimpleDyno.RPM1_ROLLER, 1]; // convert old RPM to new rad/s
+                                AnalyzedData[OverlayFileCount, SimpleDyno.RPM1_MOTOR, PointCount] = Conversions.ToDouble(line[4]) / SimpleDyno.DataUnits[SimpleDyno.RPM1_ROLLER, 1]; // convert old RPM to new rad/s
+                                AnalyzedData[OverlayFileCount, SimpleDyno.SPEED, PointCount] = Conversions.ToDouble(line[5]) / SimpleDyno.DataUnits[SimpleDyno.SPEED, 1]; // convert old MPH to new m/s
+                                AnalyzedData[OverlayFileCount, SimpleDyno.TORQUE_ROLLER, PointCount] = Conversions.ToDouble(line[9]); // already in N.m
+                                AnalyzedData[OverlayFileCount, SimpleDyno.POWER, PointCount] = Conversions.ToDouble(line[7]);
+                                AnalyzedData[OverlayFileCount, SimpleDyno.DRAG, PointCount] = Conversions.ToDouble(line[12]);
+                                // recalc the motor and wheel torques
+                                AnalyzedData[OverlayFileCount, SimpleDyno.TORQUE_WHEEL, PointCount] = AnalyzedData[OverlayFileCount, SimpleDyno.POWER, PointCount] * (tempwheeldiameter / temprollerdiameter);
+                                AnalyzedData[OverlayFileCount, SimpleDyno.TORQUE_MOTOR, PointCount] = AnalyzedData[OverlayFileCount, SimpleDyno.TORQUE_WHEEL, PointCount] / tempgearratio;
+                                // Everything else is going to be '0'
+                            }
+                            // now write out the new file format
+                            var loopTo5 = (int)Math.Round(AnalyzedData[OverlayFileCount, SimpleDyno.SESSIONTIME, 0]);
+                            for (PointCount = 1; PointCount <= loopTo5; PointCount++)
+                            {
+                                tempstring = ""; // count.ToString & " "
+                                for (paramcount = 0; paramcount <= SimpleDyno.LAST - 1; paramcount++) // CHECK - time is now the last column which will mess up the overlay routine .
+                                {
+                                    tempsplit = Strings.Split(SimpleDyno.DataUnitTags[paramcount], " "); // How many units are there
+                                    tempstring = tempstring + AnalyzedData[OverlayFileCount, paramcount, PointCount] * SimpleDyno.DataUnits[paramcount, 0] + " "; // DataTags(paramcount).Replace(" ", "_") & "(" & tempsplit(unitcount) & ") "
+                                }
+                                // ...and write it
+                                DataCopyfile.WriteLine(tempstring);
+                            }
+                            DataCopyfile.WriteLine(Constants.vbCrLf);
+                            while (!withBlock1.EndOfStream)
+                            {
+                                temp = withBlock1.ReadLine();
+                                DataCopyfile.WriteLine(temp);
+                            }
+                            DataCopyfile.Close();
+                            Program.MainI.SetMouseNormal_ThreadSafe(this);
+                            break;
+                        }
 
                         default:
-                            {
-                                Interaction.MsgBox("Could not open file.  If this is a Power Run created by an older SimpleDyno version please email it to damorc1@hotmail.com so that a fix can be made available", Constants.vbOKOnly);
-                                break;
-                            }
+                        {
+                            Interaction.MsgBox("Could not open file.  If this is a Power Run created by an older SimpleDyno version please email it to damorc1@hotmail.com so that a fix can be made available", Constants.vbOKOnly);
+                            break;
+                        }
                     }
                 }
                 DataInputFile.Close();
@@ -1008,7 +1008,7 @@ namespace SimpleDyno
             AnalyzedData = new double[6, 37, 50001];
             OverlayFileCount = 0;
             btnAddOverlayFile.Enabled = true;
-            SimpleDyno.frmFit.chkAddOrNew.Enabled = true;
+            SimpleDyno.FrmFit.chkAddOrNew.Enabled = true;
             pnlOverlaySetup();
         }
         private void btnSaveOverlay_Click_1(object sender, EventArgs e)

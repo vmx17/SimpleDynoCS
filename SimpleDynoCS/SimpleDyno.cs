@@ -1,4 +1,4 @@
-﻿//#define QueryPerformance
+﻿#define QueryPerformance
 
 using System;
 using System.Collections.Generic;
@@ -24,20 +24,18 @@ namespace SimpleDyno
     {
         #region Compiler Constants
         // These constants are used to control how the app is compiled
-        /* TODO ERROR: Skipped DefineDirectiveTrivia
-        #Const QueryPerformance = 0 'Triggers performance monitoring
-        *//* TODO ERROR: Skipped IfDirectiveTrivia
-        #If QueryPerformance Then
-        *//* TODO ERROR: Skipped DisabledTextTrivia
-            Dim StartWatch As Long, StopWatch As Long, WatchTickConversion As Long
-            Dim A As Boolean = QueryPerformanceFrequency(WatchTickConversion)
-            Const P_FREQ As Integer = 0
-            Const P_TIME As Integer = 1
-            Dim PerformanceData(2, 200) As Double 'hold frequency value and performance values
-            Dim PerfBufferCount As Integer
-        *//* TODO ERROR: Skipped EndIfDirectiveTrivia
-        #End If
-        */
+        // Triggers performance monitoring
+
+#if QueryPerformance
+        private long StartWatch;
+        private long StopWatch;
+        private long WatchTickConversion;
+        private bool A;
+        private const int P_FREQ = 0;
+        private const int P_TIME = 1;
+        private double[,] PerformanceData = new double[3, 201]; // hold frequency value and performance values
+        private int PerfBufferCount;
+#endif
         #endregion
         #region API structures
         // Structures Required by winmm.dll
@@ -69,20 +67,27 @@ namespace SimpleDyno
             // For new graphical interface
             f = new List<SimpleDynoSubForm>();
         }
+        #endregion
+        #region  Windows Form Designer generated code 
         public SimpleDyno() : base()
         {
+            A = QueryPerformanceFrequency(out WatchTickConversion);
             myCallBackFunction = new WaveCallBackProcedure(MyWaveCallBackProcedure);
+            focusStopwatch = Stopwatch.StartNew();
             serialSimuThread = new Thread(new ThreadStart(serialSimuFunc));
 
             InitializeComponent();
-            Load += (object? sender, EventArgs e) => Form1_Load(sender, e);
-            Closed += (object? sender, EventArgs e) => Form1_Closed(sender, e);
-            Activated += (object? sender, EventArgs e) => Main_Activated(sender, e);
-            Shown += (object? sender, EventArgs e) => Form1_Shown(sender, e);
-            //Load += Form1_Load;
-            //Closed += Form1_Closed;
-            //Activated += Main_Activated;
-            //Shown += Form1_Shown;
+
+            //Program.MainI.Load += Form1_Load;
+            //Program.MainI.Closed += Form1_Closed;
+            //Program.MainI.Activated += Main_Activated;
+            //Program.MainI.Shown += Form1_Shown;
+
+            Program.MainI.Load += (object? sender, EventArgs e) => Form1_Load(sender, e);
+            Program.MainI.Closed += (object? sender, EventArgs e) => Form1_Closed(sender, e);
+            Program.MainI.Activated += (object? sender, EventArgs e) => Main_Activated(sender, e);
+            Program.MainI.Shown += (object? sender, EventArgs e) => Form1_Shown(sender, e);
+            //This call is required by the Windows Form Designer.
         }
         #endregion
         #region API declarations
@@ -166,8 +171,8 @@ namespace SimpleDyno
 
         // CHECK INTEGERS FOR QUERY PERFORMANCE IF WE LEAVE RUNDOWN IN
 #if QueryPerformance
-        internal const int PERFORMANCE = 36
-        internal const int LAST = 37
+        internal const int PERFORMANCE = 36;
+        internal const int LAST = 37;
 #else
         
         internal const int LAST = 36; // CHECK - PRE RUNDOWN THIS WAS 27
@@ -256,23 +261,48 @@ namespace SimpleDyno
         #endregion
         #region SimpleDyno Definitions 
         // Version Strings
-        public static string MainTitle = "SimpleDyno HS " + SDVersion + " by DamoRC / LNi / JAh";
+        public static string MainTitle = "SimpleDyno HS CS" + SDVersion + " by DamoRC / LNi / JAh / vmx17";
         public static string PowerRunVersion = "POWER_RUN_" + SDVersion;
         public static string LogRawVersion = "LOG_RAW_" + SDVersion;
         public static string InterfaceVersion = "SimpleDyno_Interface_" + SDVersion;
 
         // Sub Forms
-        public static Dyno frmDyno;
-        public static COM frmCOM;
-        public static Analysis frmAnalysis;
-        public static Fit frmFit;
-        public static Correction frmCorrection;
+        private static Dyno s_frmDyno;
+        public static Dyno FrmDyno
+        {
+            get { return s_frmDyno; }
+            set { s_frmDyno = value; }
+        }
+        private static COM s_frmCOM;
+        public static COM FrmCom
+        {
+            get { return s_frmCOM; }
+            set { s_frmCOM = value; }
+        }
+        private static Analysis s_frmAnalysis;
+        public static Analysis FrmAnalysis
+        {
+            get { return s_frmAnalysis; }
+            set { s_frmAnalysis = value; }
+        }
+        private static Fit s_frmFit;
+        public static Fit FrmFit
+        {
+            get { return s_frmFit; }
+            set { s_frmFit = value; }
+        }
+        private static Correction s_frmCorrection;
+        public static Correction FrmCorrection
+        {
+            get { return s_frmCorrection; }
+            set { s_frmCorrection = value; }
+        }
 
-        private double TempDouble; // Global String Temporary Variable for Double Conversion
+        private double m_tempDouble; // Global String Temporary Variable for Double Conversion
 
         // Serial Port Coms and measures
-        private SerialPort mySerialPort = new SerialPort();
-        private bool COMPortsAvailable = false;
+        private SerialPort m_serialPort = new SerialPort();
+        private bool m_COMPortsAvailable = false;
         public static string[] COMPortMessage;
         public static double Voltage1;
         public static double Voltage2;
@@ -333,14 +363,14 @@ namespace SimpleDyno
 
         // NOTE - The following delclarations use the largest primary and secondary dimensions
         // Friend" declarations are to allow passing the information to the new graphical interface classes
-        public static double[,] Data = new double[36, 4];
-        public static string[] DataTags = new string[36];
-        public static double[,] DataUnits = new double[36, 6]; // allows for 5 different units for each Data value
-        public static string[] DataUnitTags = new string[36]; // labels for the Various units
-        public static bool[] DataAreUsed = new bool[36];
+        public static double[,] Data = new double[37, 4];
+        public static string[] DataTags = new string[37];
+        public static double[,] DataUnits = new double[37, 6]; // allows for 5 different units for each Data value
+        public static string[] DataUnitTags = new string[37]; // labels for the Various units
+        public static bool[] DataAreUsed = new bool[37];
 
         // Use the new Data Structure approach for the collected data from power runs
-        public static double[,] CollectedData = new double[36, 50001];
+        public static double[,] CollectedData = new double[37, 50001];
 
         // General
         private int i;
@@ -509,25 +539,20 @@ namespace SimpleDyno
         #region Form Load, WndProc, Button and Trackbar Events, Delgates and Close
         private void Form1_Load(object sender, EventArgs e)
         {
-            /* TODO ERROR: Skipped IfDirectiveTrivia
-            #If QueryPerformance Then
-            *//* TODO ERROR: Skipped DisabledTextTrivia
-                    btnPerformanceTest.Visible = True
-                            cmbBufferSize.Visible = True
-            *//* TODO ERROR: Skipped ElseDirectiveTrivia
-            #Else
-            */
+#if QueryPerformance
+            btnPerformanceTest.Visible = true;
+            cmbBufferSize.Visible = true;
+#else
+
             btnPerformanceTest.Visible = false;
             cmbBufferSize.Visible = false;
-            /* TODO ERROR: Skipped EndIfDirectiveTrivia
-            #End If
-            */
+#endif
             // Create Instances of the sub forms
-            frmDyno = new Dyno();
-            frmCOM = new COM();
-            frmAnalysis = new Analysis();
-            frmFit = new Fit();
-            frmCorrection = new Correction();
+            s_frmDyno = new Dyno();
+            s_frmCOM = new COM();
+            s_frmAnalysis = new Analysis();
+            s_frmFit = new Fit();
+            s_frmCorrection = new Correction();
             // get folders
             string appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
             m_settingsDirectory = Path.Combine(appDataPath, "SimpleDyno");
@@ -551,7 +576,7 @@ namespace SimpleDyno
             // Check and load available COM Ports
             GetAvailableCOMPorts();
 
-            if (COMPortsAvailable == true)
+            if (m_COMPortsAvailable == true)
             {
                 cmbAcquisition.Items.AddRange(AcquisitionOptions);
             }
@@ -561,14 +586,14 @@ namespace SimpleDyno
             }
             cmbAcquisition.SelectedIndex = 0;
 
-            frmAnalysis.Analysis_Setup();
-            frmFit.Fit_Setup();
+            s_frmAnalysis.Analysis_Setup();
+            s_frmFit.Fit_Setup();
 
             // Load saved setting
             LoadParametersFromFile();
 
-            frmDyno.Dyno_Setup();
-            frmCOM.COM_Setup();
+            s_frmDyno.Dyno_Setup();
+            s_frmCOM.COM_Setup();
 
             // Setup graphics data
             PrepareGraphicsParameters();
@@ -603,23 +628,23 @@ namespace SimpleDyno
         private void btnDyno_Click(object sender, EventArgs e)
         {
             btnHide_Click(this, EventArgs.Empty);
-            frmDyno.ShowDialog();
+            s_frmDyno.ShowDialog();
         }
         private void btnAnalysis_Click(object sender, EventArgs e)
         {
             btnHide_Click(this, EventArgs.Empty);
-            frmAnalysis.ShowDialog();
-            frmAnalysis.pnlOverlaySetup();
+            s_frmAnalysis.ShowDialog();
+            s_frmAnalysis.pnlOverlaySetup();
         }
         private void btnCOM_Click(object sender, EventArgs e)
         {
             btnHide_Click(this, EventArgs.Empty);
-            frmCOM.ShowDialog();
+            s_frmCOM.ShowDialog();
         }
         private void Button1_Click(object sender, EventArgs e)
         {
             btnHide_Click(this, EventArgs.Empty);
-            frmCorrection.ShowDialog();
+            s_frmCorrection.ShowDialog();
         }
         private void pnlSignalWindow_MouseClick(object sender, MouseEventArgs e)
         {
@@ -891,25 +916,25 @@ namespace SimpleDyno
                     {
                         DataOutputFile.WriteLine("No_Baud_Rate_Selected");
                     }
-                    DataOutputFile.WriteLine("Car_Mass: " + frmDyno.CarMass.ToString() + " grams");
-                    DataOutputFile.WriteLine("Frontal_Area: " + frmDyno.FrontalArea.ToString() + " mm2");
-                    DataOutputFile.WriteLine("Drag_Coefficient: " + frmDyno.DragCoefficient.ToString());
+                    DataOutputFile.WriteLine("Car_Mass: " + s_frmDyno.CarMass.ToString() + " grams");
+                    DataOutputFile.WriteLine("Frontal_Area: " + s_frmDyno.FrontalArea.ToString() + " mm2");
+                    DataOutputFile.WriteLine("Drag_Coefficient: " + s_frmDyno.DragCoefficient.ToString());
                     DataOutputFile.WriteLine("Gear_Ratio: " + GearRatio.ToString());
-                    DataOutputFile.WriteLine("Wheel_Diameter: " + frmDyno.WheelDiameter.ToString() + " mm");
-                    DataOutputFile.WriteLine("Roller_Diameter: " + frmDyno.RollerDiameter.ToString() + " mm");
-                    DataOutputFile.WriteLine("Roller_Wall_Thickness: " + frmDyno.RollerWallThickness.ToString() + " mm");
-                    DataOutputFile.WriteLine("Roller_Mass: " + frmDyno.RollerMass.ToString() + " grams");
-                    DataOutputFile.WriteLine("Axle_Diameter: " + frmDyno.AxleDiameter.ToString() + " mm");
-                    DataOutputFile.WriteLine("Axle_Mass: " + frmDyno.AxleMass.ToString() + " grams");
-                    DataOutputFile.WriteLine("End_Cap_Mass: " + frmDyno.EndCapMass.ToString() + " grams");
-                    DataOutputFile.WriteLine("Extra_Diameter: " + frmDyno.ExtraDiameter.ToString() + " mm");
-                    DataOutputFile.WriteLine("Extra_Wall_Thickness: " + frmDyno.ExtraWallThickness.ToString() + " mm");
-                    DataOutputFile.WriteLine("Extra_Mass: " + frmDyno.ExtraMass.ToString() + " grams");
+                    DataOutputFile.WriteLine("Wheel_Diameter: " + s_frmDyno.WheelDiameter.ToString() + " mm");
+                    DataOutputFile.WriteLine("Roller_Diameter: " + s_frmDyno.RollerDiameter.ToString() + " mm");
+                    DataOutputFile.WriteLine("Roller_Wall_Thickness: " + s_frmDyno.RollerWallThickness.ToString() + " mm");
+                    DataOutputFile.WriteLine("Roller_Mass: " + s_frmDyno.RollerMass.ToString() + " grams");
+                    DataOutputFile.WriteLine("Axle_Diameter: " + s_frmDyno.AxleDiameter.ToString() + " mm");
+                    DataOutputFile.WriteLine("Axle_Mass: " + s_frmDyno.AxleMass.ToString() + " grams");
+                    DataOutputFile.WriteLine("End_Cap_Mass: " + s_frmDyno.EndCapMass.ToString() + " grams");
+                    DataOutputFile.WriteLine("Extra_Diameter: " + s_frmDyno.ExtraDiameter.ToString() + " mm");
+                    DataOutputFile.WriteLine("Extra_Wall_Thickness: " + s_frmDyno.ExtraWallThickness.ToString() + " mm");
+                    DataOutputFile.WriteLine("Extra_Mass: " + s_frmDyno.ExtraMass.ToString() + " grams");
                     DataOutputFile.WriteLine("Target_MOI: " + IdealMomentOfInertia.ToString() + " kg/m2");
                     DataOutputFile.WriteLine("Actual_MOI: " + DynoMomentOfInertia.ToString() + " kg/m2");
                     DataOutputFile.WriteLine("Target_Roller_Mass: " + IdealRollerMass.ToString() + " grams");
-                    DataOutputFile.WriteLine("Signals_Per_RPM1: " + frmDyno.SignalsPerRPM.ToString());
-                    DataOutputFile.WriteLine("Signals_Per_RPM2: " + frmDyno.SignalsPerRPM2.ToString());
+                    DataOutputFile.WriteLine("Signals_Per_RPM1: " + s_frmDyno.SignalsPerRPM.ToString());
+                    DataOutputFile.WriteLine("Signals_Per_RPM2: " + s_frmDyno.SignalsPerRPM2.ToString());
                     DataOutputFile.WriteLine("Channel_1_Threshold " + HighSignalThreshold.ToString());
                     DataOutputFile.WriteLine("Channel_2_Threshold " + HighSignalThreshold2.ToString());
                     // The following not needed for Log Raw
@@ -1066,28 +1091,28 @@ namespace SimpleDyno
                     c.KeyPress += txtControl_KeyPress;
                 }
             }
-            foreach (Control c in frmDyno.Controls)
+            foreach (Control c in s_frmDyno.Controls)
             {
                 if (c is TextBox)
                 {
                     c.KeyPress += txtControl_KeyPress;
                 }
             }
-            foreach (Control c in frmCOM.Controls)
+            foreach (Control c in s_frmCOM.Controls)
             {
                 if (c is TextBox)
                 {
                     c.KeyPress += txtControl_KeyPress;
                 }
             }
-            foreach (Control c in frmAnalysis.Controls)
+            foreach (Control c in s_frmAnalysis.Controls)
             {
                 if (c is TextBox)
                 {
                     c.KeyPress += txtControl_KeyPress;
                 }
             }
-            foreach (Control c in frmFit.Controls)
+            foreach (Control c in s_frmFit.Controls)
             {
                 if (c is TextBox)
                 {
@@ -1116,9 +1141,9 @@ namespace SimpleDyno
         {
             double LocalMin = 0.1d;
             double LocalMax = 2d;
-            if (double.TryParse(((TextBox)sender).Text, out TempDouble) && CheckNumericalLimits(LocalMin, LocalMax, TempDouble))
+            if (double.TryParse(((TextBox)sender).Text, out m_tempDouble) && CheckNumericalLimits(LocalMin, LocalMax, m_tempDouble))
             {
-                WaitForNewSignal = TempDouble;
+                WaitForNewSignal = m_tempDouble;
             }
             else
             {
@@ -1136,13 +1161,13 @@ namespace SimpleDyno
         {
             double LocalMin = 0d;
             double LocalMax = 999999d;
-            if (double.TryParse(((TextBox)sender).Text, out TempDouble) && CheckNumericalLimits(LocalMin, LocalMax, TempDouble))
+            if (double.TryParse(((TextBox)sender).Text, out m_tempDouble) && CheckNumericalLimits(LocalMin, LocalMax, m_tempDouble))
             {
-                PowerRunThreshold = TempDouble;
+                PowerRunThreshold = m_tempDouble;
                 ActualPowerRunThreshold = PowerRunThreshold / 60d * 2d * Math.PI; // convert it to rads/s
                                                                                   // Trying setting the minimum number of points to be collected in here also
                                                                                   // CHECK - this should also be set when Signals per RPM changes
-                MinimumPowerRunPoints = frmDyno.SignalsPerRPM * 10d; // This somewhat arbitrary 
+                MinimumPowerRunPoints = s_frmDyno.SignalsPerRPM * 10d; // This somewhat arbitrary 
             }
             else
             {
@@ -1192,13 +1217,13 @@ namespace SimpleDyno
                                 var SortedControls = new List<Control>();
                                 foreach (Control c in Controls)
                                     SortedControls.Add(c);
-                                foreach (Control c in frmDyno.Controls)
+                                foreach (Control c in s_frmDyno.Controls)
                                     SortedControls.Add(c);
-                                foreach (Control c in frmCOM.Controls)
+                                foreach (Control c in s_frmCOM.Controls)
                                     SortedControls.Add(c);
-                                foreach (Control c in frmAnalysis.Controls)
+                                foreach (Control c in s_frmAnalysis.Controls)
                                     SortedControls.Add(c);
-                                foreach (Control c in frmFit.Controls)
+                                foreach (Control c in s_frmFit.Controls)
                                     SortedControls.Add(c);
                                 // Need to use sorted list so that cmbData are loaded before cmbUnits
                                 SortedControls.Sort(SortControls);
@@ -1274,13 +1299,13 @@ namespace SimpleDyno
                         var SortedControls = new List<Control>();
                         foreach (Control c in Controls)
                             SortedControls.Add(c);
-                        foreach (Control c in frmDyno.Controls)
+                        foreach (Control c in s_frmDyno.Controls)
                             SortedControls.Add(c);
-                        foreach (Control c in frmCOM.Controls)
+                        foreach (Control c in s_frmCOM.Controls)
                             SortedControls.Add(c);
-                        foreach (Control c in frmAnalysis.Controls)
+                        foreach (Control c in s_frmAnalysis.Controls)
                             SortedControls.Add(c);
-                        foreach (Control c in frmFit.Controls)
+                        foreach (Control c in s_frmFit.Controls)
                             SortedControls.Add(c);
                         // Need to use sorted list so that cmbData are loaded before cmbUnits
                         SortedControls.Sort(SortControls);
@@ -1424,13 +1449,13 @@ namespace SimpleDyno
                 var SortedControls = new List<Control>();
                 foreach (Control c in Controls)
                     SortedControls.Add(c);
-                foreach (Control c in frmDyno.Controls)
+                foreach (Control c in s_frmDyno.Controls)
                     SortedControls.Add(c);
-                foreach (Control c in frmCOM.Controls)
+                foreach (Control c in s_frmCOM.Controls)
                     SortedControls.Add(c);
-                foreach (Control c in frmAnalysis.Controls)
+                foreach (Control c in s_frmAnalysis.Controls)
                     SortedControls.Add(c);
-                foreach (Control c in frmFit.Controls)
+                foreach (Control c in s_frmFit.Controls)
                     SortedControls.Add(c);
 
                 foreach (Control c in SortedControls)
@@ -1469,7 +1494,7 @@ namespace SimpleDyno
                 // End If
                 // Next
 
-                // For Each c As Control In frmDyno.Controls
+                // For Each c As Control In s_frmDyno.Controls
                 // If TypeOf c Is TextBox Then
                 // ParameterOutputFile.WriteLine("[" & c.Name.ToString & "]" & c.Text)
                 // End If
@@ -1479,7 +1504,7 @@ namespace SimpleDyno
                 // End If
                 // Next
 
-                // For Each c As Control In frmCOM.Controls
+                // For Each c As Control In s_frmCOM.Controls
                 // If TypeOf c Is TextBox Then
                 // ParameterOutputFile.WriteLine("[" & c.Name.ToString & "]" & c.Text)
                 // End If
@@ -1489,7 +1514,7 @@ namespace SimpleDyno
                 // End If
                 // Next
 
-                // For Each c As Control In frmAnalysis.Controls
+                // For Each c As Control In s_frmAnalysis.Controls
                 // If TypeOf c Is TextBox Then
                 // ParameterOutputFile.WriteLine("[" & c.Name.ToString & "]" & c.Text)
                 // End If
@@ -1499,7 +1524,7 @@ namespace SimpleDyno
                 // End If
                 // Next
 
-                // For Each c As Control In frmFit.Controls
+                // For Each c As Control In s_frmFit.Controls
                 // If TypeOf c Is TextBox Then
                 // ParameterOutputFile.WriteLine("[" & c.Name.ToString & "]" & c.Text)
                 // End If
@@ -1745,15 +1770,11 @@ namespace SimpleDyno
             DataUnits[CORRECTED_POWER_MOTOR, 0] = 1d;
             DataUnits[CORRECTED_POWER_MOTOR, 1] = 0.001d;
             DataUnits[CORRECTED_POWER_MOTOR, 2] = 0.00134d;
-            /* TODO ERROR: Skipped IfDirectiveTrivia
-            #If QueryPerformance Then
-            *//* TODO ERROR: Skipped DisabledTextTrivia
-                    DataTags(PERFORMANCE) = "Performance"
-                    DataUnitTags(PERFORMANCE) = "%"
-                    DataUnits(PERFORMANCE, 0) = 1
-            *//* TODO ERROR: Skipped EndIfDirectiveTrivia
-            #End If
-            */
+#if QueryPerformance
+            DataTags[PERFORMANCE] = "Performance";
+            DataUnitTags[PERFORMANCE] = "%";
+            DataUnits[PERFORMANCE, 0] = 1;
+#endif
         }
         internal void COMPortCalibration()
         {
@@ -1989,13 +2010,9 @@ namespace SimpleDyno
         {
             try
             {
-                /* TODO ERROR: Skipped IfDirectiveTrivia
-                #If QueryPerformance Then
-                *//* TODO ERROR: Skipped DisabledTextTrivia
-                            QueryPerformanceCounter(StartWatch)
-                *//* TODO ERROR: Skipped EndIfDirectiveTrivia
-                #End If
-                */
+#if QueryPerformance
+                QueryPerformanceCounter(ref StartWatch);
+#endif
                 if (StopAddingBuffers == false) // StopAddingBuffers is true when ShutDownWaves has been called
                 {
 
@@ -2404,24 +2421,20 @@ namespace SimpleDyno
                 BufferCount = BufferCount + 1;
                 if (BufferCount > NUMBER_OF_BUFFERS - 1)
                     BufferCount = 0;
+#if QueryPerformance
+                QueryPerformanceCounter(ref StopWatch);
+                if (PerfBufferCount < 150) PerfBufferCount += 1;
+                Data[PERFORMANCE, ACTUAL] = ((StopWatch - StartWatch) / (double)WatchTickConversion * 1000) / (BUFFER_SIZE / (double)SAMPLE_RATE * 1000) * 100;
+                PerformanceData[P_FREQ, PerfBufferCount] = Data[CHAN1_FREQUENCY, ACTUAL];
+                PerformanceData[P_TIME, PerfBufferCount] = Data[PERFORMANCE, ACTUAL];
+                // 11MAY2011 Sub running at an average of 0.01 secs with buffers being retured at 3200 (buffsize) / 44100 (rate) which is 0.07 seconds
+                // 29NOV2012 Sub running at average 8 ms with theoretical callback every 72 ms
+                // 17DEC12 Sub Running at 8 - 10 ms with theoretical callback every 72 ms
+                // 12APR13 Sub Running at around 14 ms 
+                // 19SEP13 Sub Running at around 20 ms for 2 channels, 44100 Hz, doesn't seem to be significantly affected id COM port is open.
+                // 19SEP13 Max Processing time for 2Ch, 44K, COM Port 9600 Baud is 47ms
+#endif
             }
-            /* TODO ERROR: Skipped IfDirectiveTrivia
-            #If QueryPerformance Then
-            *//* TODO ERROR: Skipped DisabledTextTrivia
-                        QueryPerformanceCounter(StopWatch)
-                        If PerfBufferCount < 150 Then PerfBufferCount += 1
-                        Data(PERFORMANCE, ACTUAL) = ((StopWatch - StartWatch) / WatchTickConversion * 1000) / (BUFFER_SIZE / SAMPLE_RATE * 1000) * 100
-                        PerformanceData(P_FREQ, PerfBufferCount) = Data(CHAN1_FREQUENCY, ACTUAL)
-                        PerformanceData(P_TIME, PerfBufferCount) = Data(PERFORMANCE, ACTUAL)
-                        '11MAY2011 Sub running at an average of 0.01 secs with buffers being retured at 3200 (buffsize) / 44100 (rate) which is 0.07 seconds
-                        '29NOV2012 Sub running at average 8 ms with theoretical callback every 72 ms
-                        '17DEC12 Sub Running at 8 - 10 ms with theoretical callback every 72 ms
-                        '12APR13 Sub Running at around 14 ms 
-                        '19SEP13 Sub Running at around 20 ms for 2 channels, 44100 Hz, doesn't seem to be significantly affected id COM port is open.
-                        '19SEP13 Max Processing time for 2Ch, 44K, COM Port 9600 Baud is 47ms
-            *//* TODO ERROR: Skipped EndIfDirectiveTrivia
-            #End If
-            */
             catch (Exception e)
             {
                 btnHide_Click(this, EventArgs.Empty);
@@ -2586,7 +2599,7 @@ namespace SimpleDyno
                 cmbCOMPorts.Enabled = true;
                 cmbBaudRate.Enabled = true;
                 {
-                    ref var withBlock = ref frmFit;
+                    ref var withBlock = ref s_frmFit;
                     withBlock.rdoCurrent.Enabled = true;
                     withBlock.rdoVoltage.Enabled = true;
                     withBlock.txtCurrentSmooth.Enabled = true;
@@ -2600,7 +2613,7 @@ namespace SimpleDyno
                 cmbCOMPorts.Enabled = false;
                 cmbBaudRate.Enabled = false;
                 {
-                    ref var withBlock1 = ref frmFit;
+                    ref var withBlock1 = ref s_frmFit;
                     withBlock1.rdoCurrent.Enabled = false;
                     withBlock1.rdoVoltage.Enabled = false;
                     withBlock1.txtCurrentSmooth.Enabled = false;
@@ -2625,7 +2638,7 @@ namespace SimpleDyno
                 DataAreUsed[count] = true;
 
             // Disable all calibrate buttons on the COM form
-            foreach (Control c in frmCOM.Controls)
+            foreach (Control c in s_frmCOM.Controls)
             {
                 if (c is Button)
                 {
@@ -2637,13 +2650,9 @@ namespace SimpleDyno
             {
                 SAMPLE_RATE = Conversions.ToInteger(cmbSampleRate.SelectedItem.ToString().Substring(0, cmbSampleRate.SelectedItem.ToString().IndexOf(" ")));
                 NUMBER_OF_CHANNELS = Conversions.ToInteger(cmbChannels.SelectedItem.ToString().Substring(0, cmbChannels.SelectedItem.ToString().IndexOf(" ")));
-                /* TODO ERROR: Skipped IfDirectiveTrivia
-                #If QueryPerformance Then
-                *//* TODO ERROR: Skipped DisabledTextTrivia
-                            BUFFER_SIZE = CInt(cmbBufferSize.SelectedItem.ToString.Substring(0, cmbBufferSize.SelectedItem.ToString.IndexOf(" "))) * NUMBER_OF_CHANNELS
-                *//* TODO ERROR: Skipped ElseDirectiveTrivia
-                #Else
-                */
+#if QueryPerformanc
+                BUFFER_SIZE = Conversions.ToInteger(cmbBufferSize.SelectedItem.ToString().Substring(0, cmbBufferSize.SelectedItem.ToString().IndexOf(" "))) * NUMBER_OF_CHANNELS;
+#else
                 switch (SAMPLE_RATE)
                 {
                     case var @case when @case == 11025:
@@ -2662,9 +2671,7 @@ namespace SimpleDyno
                         break;
                     }
                 }
-                /* TODO ERROR: Skipped EndIfDirectiveTrivia
-                #End If
-                */
+#endif
                 if (NUMBER_OF_CHANNELS == 1)
                 {
                     DataAreUsed[RPM2] = false;
@@ -2758,13 +2765,13 @@ namespace SimpleDyno
             try
             {
                 Problem = "Setting COM Available to false";
-                COMPortsAvailable = false;
+                m_COMPortsAvailable = false;
                 Problem = "Getting Names of Serial Ports";
                 string[] ports = SerialPort.GetPortNames();
                 if (ports.Length > 0)
                 {
                     Problem = "About to check port name";
-                    COMPortsAvailable = true;
+                    m_COMPortsAvailable = true;
                     for (int i = 0; i < ports.Length; i++)
                     {
                         Problem = "Found COM - adding to CMB";
@@ -2777,7 +2784,7 @@ namespace SimpleDyno
                     throw new Exception();
                 }
                 Problem = "Check Available COM Ports Status";
-                if (COMPortsAvailable)
+                if (m_COMPortsAvailable)
                 {
                     Problem = "Yes - COM port available setting index to 0";
                     cmbCOMPorts.SelectedIndex = 0;
@@ -2799,24 +2806,24 @@ namespace SimpleDyno
         }
         private void SerialOpen(string SentPort, int SentRate)
         {
-            while (mySerialPort.IsOpen != false)
+            while (m_serialPort.IsOpen != false)
                 Application.DoEvents();
             SentPort = "COM" + SentPort.Substring(SentPort.IndexOf("(COM") + 4).TrimEnd(')');
-            mySerialPort = new SerialPort(SentPort);
-            mySerialPort.BaudRate = SentRate;
-            mySerialPort.Parity = Parity.None;
-            mySerialPort.StopBits = StopBits.One;
-            mySerialPort.DataBits = 8;
-            mySerialPort.Handshake = Handshake.None;
-            mySerialPort.ReadTimeout = 500;
-            // AddHandler mySerialPort.DataReceived, AddressOf DataReceivedHandler
+            m_serialPort = new SerialPort(SentPort);
+            m_serialPort.BaudRate = SentRate;
+            m_serialPort.Parity = Parity.None;
+            m_serialPort.StopBits = StopBits.One;
+            m_serialPort.DataBits = 8;
+            m_serialPort.Handshake = Handshake.None;
+            m_serialPort.ReadTimeout = 500;
+            // AddHandler m_serialPort.DataReceived, AddressOf DataReceivedHandler
             try
             {
-                mySerialPort.Open();
-                mySerialPort.DiscardInBuffer();
-                mySerialPort.DataReceived += DataReceivedHandler;
+                m_serialPort.Open();
+                m_serialPort.DiscardInBuffer();
+                m_serialPort.DataReceived += DataReceivedHandler;
                 // Enable Calibration buttons on com form
-                foreach (Control c in frmCOM.Controls)
+                foreach (Control c in s_frmCOM.Controls)
                 {
                     if (c is Button)
                     {
@@ -2828,10 +2835,10 @@ namespace SimpleDyno
             {
                 btnHide_Click(this, EventArgs.Empty);
                 Interaction.MsgBox("Error reading COM Port.", (MsgBoxStyle)Constants.vbOK);
-                if (mySerialPort.IsOpen)
-                    mySerialPort.Close();
+                if (m_serialPort.IsOpen)
+                    m_serialPort.Close();
                 // Enable Calibration buttons on com form
-                foreach (Control c in frmCOM.Controls)
+                foreach (Control c in s_frmCOM.Controls)
                 {
                     if (c is Button)
                     {
@@ -2844,9 +2851,9 @@ namespace SimpleDyno
         private void SerialClose()
         {
             ClosingCOMPort = true;
-            if (mySerialPort.IsOpen)
+            if (m_serialPort.IsOpen)
             {
-                mySerialPort.DataReceived -= DataReceivedHandler;
+                m_serialPort.DataReceived -= DataReceivedHandler;
                 var t = default(int);
                 // CHECK - this is a real hack
                 while (t != 100000)
@@ -2854,7 +2861,7 @@ namespace SimpleDyno
                     t += 1;
                     Application.DoEvents();
                 }
-                mySerialPort.Close();
+                m_serialPort.Close();
             }
             ClosingCOMPort = false;
         }
@@ -2893,11 +2900,11 @@ namespace SimpleDyno
                             Data[PIN04VALUE, ACTUAL] = A4ValueIntercept + A4ValueSlope * Conversions.ToDouble(COMPortMessage[9]);
                             Data[PIN05VALUE, ACTUAL] = A5ValueIntercept + A5ValueSlope * Conversions.ToDouble(COMPortMessage[10]);
 
-                            if (frmCOM.Calibrating)
+                            if (s_frmCOM.Calibrating)
                             {
                                 for (int t = 0; t <= 5; t++)
-                                    frmCOM.CalibrationValues[t] += Conversions.ToDouble(COMPortMessage[t + 5]);
-                                frmCOM.NumberOfCalibrationValues += 1L;
+                                    s_frmCOM.CalibrationValues[t] += Conversions.ToDouble(COMPortMessage[t + 5]);
+                                s_frmCOM.NumberOfCalibrationValues += 1L;
                             }
 
                             Data[WATTS_IN, ACTUAL] = Data[VOLTS, ACTUAL] * Data[AMPS, ACTUAL];
@@ -3138,12 +3145,12 @@ namespace SimpleDyno
 
                         DoPowerRunSerialControl(A5ValueIntercept + A5ValueSlope * Conversions.ToDouble(COMPortMessage[10]), COMPortMessage);
 
-                        this.SetControlText_Threadsafe(frmCOM.lblCurrentVolts, NewCustomFormat(Data[VOLTS, ACTUAL]));
-                        this.SetControlText_Threadsafe(frmCOM.lblCurrentAmps, NewCustomFormat(Data[AMPS, ACTUAL]));
-                        this.SetControlText_Threadsafe(frmCOM.lblCurrentTemperature1, NewCustomFormat(Data[TEMPERATURE1, ACTUAL]));
-                        this.SetControlText_Threadsafe(frmCOM.lblCurrentTemperature2, NewCustomFormat(Data[TEMPERATURE2, ACTUAL]));
-                        this.SetControlText_Threadsafe(frmCOM.lblCurrentPinA4, NewCustomFormat(Data[PIN04VALUE, ACTUAL]));
-                        this.SetControlText_Threadsafe(frmCOM.lblCurrentPinA5, NewCustomFormat(Data[PIN05VALUE, ACTUAL]));
+                        this.SetControlText_Threadsafe(s_frmCOM.lblCurrentVolts, NewCustomFormat(Data[VOLTS, ACTUAL]));
+                        this.SetControlText_Threadsafe(s_frmCOM.lblCurrentAmps, NewCustomFormat(Data[AMPS, ACTUAL]));
+                        this.SetControlText_Threadsafe(s_frmCOM.lblCurrentTemperature1, NewCustomFormat(Data[TEMPERATURE1, ACTUAL]));
+                        this.SetControlText_Threadsafe(s_frmCOM.lblCurrentTemperature2, NewCustomFormat(Data[TEMPERATURE2, ACTUAL]));
+                        this.SetControlText_Threadsafe(s_frmCOM.lblCurrentPinA4, NewCustomFormat(Data[PIN04VALUE, ACTUAL]));
+                        this.SetControlText_Threadsafe(s_frmCOM.lblCurrentPinA5, NewCustomFormat(Data[PIN05VALUE, ACTUAL]));
 
                     }
                 }
@@ -3230,7 +3237,7 @@ namespace SimpleDyno
                 try
                 {
                     // Regardless of why we clicked it, the radio button for rpm on the fit form should be set for RPM
-                    frmFit.rdoRPM1.Checked = true;
+                    s_frmFit.rdoRPM1.Checked = true;
                     if (WhichDataMode == POWERRUN) // We are cancelling the power run
                     {
                         btnStartLoggingRaw.Enabled = true;
@@ -3264,7 +3271,7 @@ namespace SimpleDyno
                         }
                         WhichDataMode = POWERRUN;
                         StopFitting = false;
-                        frmFit.ProcessData();
+                        s_frmFit.ProcessData();
 
                     } // Put Fit.vb in mode where it waits for data until WhichDataMode changes
                 }
@@ -3718,108 +3725,151 @@ namespace SimpleDyno
         }
         #endregion
         #region Performance Testing
-        /* TODO ERROR: Skipped IfDirectiveTrivia
-        #If QueryPerformance Then
-        *//* TODO ERROR: Skipped DisabledTextTrivia
-            Private Sub btnPerformanceTest_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles btnPerformanceTest.Click
-                'Cycle through all listed buffer sizes, sampling rates, channel numbers and +/- adv processing
-                'Collect approx 100 points per
-                'Calculate average, stdev, min, max, based on middle 60 points.  Also count P_Time events > 100 
-                'First, ADV off
-                Dim SumPerf As Double, SumFreq As Double
-                Dim AvePerf As Double, AveFreq As Double
-                Dim StdPerf As Double, StdFreq As Double
-                Dim MinPerf As Double, MinFreq As Double
-                Dim MaxPerf As Double, MaxFreq As Double
-                Dim PerfGreaterThan100 As Double
-                Dim i As Integer, j As Integer, k As Integer, t As Integer
-                ReDim PerformanceData(2, 200)
-                chkAdvancedProcessing.Checked = False
-                For i = 0 To cmbChannels.Items.Count - 1
-                    cmbChannels.SelectedIndex = i
-                    For j = 0 To cmbBufferSize.Items.Count - 1
-                        cmbBufferSize.SelectedIndex = j
-                        For k = 0 To cmbSampleRate.Items.Count - 1
-                            cmbSampleRate.SelectedIndex = k
-                            btnStartAcquisition_Click(Me, EventArgs.Empty)
-                            Do
-                                Application.DoEvents()
-                            Loop Until PerfBufferCount >= 100
-                            SumPerf = 0 : SumFreq = 0
-                            MinPerf = 100000 : MinFreq = 100000
-                            MaxPerf = 0 : MaxFreq = 0
-                            PerfGreaterThan100 = 0
-                            AvePerf = 0 : AveFreq = 0
-                            StdPerf = 0 : StdFreq = 0
-                            For t = 21 To 80
-                                SumPerf = SumPerf + PerformanceData(P_TIME, t)
-                                SumFreq = SumFreq + PerformanceData(P_FREQ, t)
-                                If PerformanceData(P_TIME, t) < MinPerf Then MinPerf = PerformanceData(P_TIME, t)
-                                If PerformanceData(P_TIME, t) > MaxPerf Then MaxPerf = PerformanceData(P_TIME, t)
-                                If PerformanceData(P_FREQ, t) < MinFreq Then MinFreq = PerformanceData(P_FREQ, t)
-                                If PerformanceData(P_FREQ, t) > MaxFreq Then MaxFreq = PerformanceData(P_FREQ, t)
-                                If PerformanceData(P_TIME, t) > 100 Then PerfGreaterThan100 += 1
-                                'Debug.Print(PerformanceData(P_FREQ, t).ToString & " " & PerformanceData(P_TIME, t).ToString)
-                            Next
-                            AvePerf = SumPerf / 60
-                            AveFreq = SumFreq / 60
-                            SumPerf = 0 : SumFreq = 0
-                            For t = 21 To 80
-                                SumPerf = SumPerf + (PerformanceData(P_TIME, t) - AvePerf) ^ 2
-                                SumFreq = SumFreq + (PerformanceData(P_FREQ, t) - AveFreq) ^ 2
-                            Next
-                            StdPerf = (SumPerf / 59) ^ 0.5
-                            StdFreq = (SumFreq / 59) ^ 0.5
-                            Debug.Print("Adv" & chkAdvancedProcessing.CheckState.ToString & " " & NUMBER_OF_CHANNELS & " " & BUFFER_SIZE & " " & SAMPLE_RATE & " Freq (min,max,ave,std): " & MinFreq & " " & MaxFreq & " " & AveFreq & " " & StdFreq & " Perf (min,max,ave,std,#>100): " & MinPerf & " " & MaxPerf & " " & AvePerf & " " & StdPerf & " " & PerfGreaterThan100)
-                            PerfBufferCount = 0
-                        Next
-                    Next
-                Next
-                chkAdvancedProcessing.Checked = True
-                For i = 0 To cmbChannels.Items.Count - 1
-                    cmbChannels.SelectedIndex = i
-                    For j = 0 To cmbBufferSize.Items.Count - 1
-                        cmbBufferSize.SelectedIndex = j
-                        For k = 0 To cmbSampleRate.Items.Count - 1
-                            cmbSampleRate.SelectedIndex = k
-                            btnStartAcquisition_Click(Me, EventArgs.Empty)
-                            Do
-                                Application.DoEvents()
-                            Loop Until PerfBufferCount >= 100
-                            SumPerf = 0 : SumFreq = 0
-                            MinPerf = 100000 : MinFreq = 100000
-                            MaxPerf = 0 : MaxFreq = 0
-                            PerfGreaterThan100 = 0
-                            AvePerf = 0 : AveFreq = 0
-                            StdPerf = 0 : StdFreq = 0
-                            For t = 21 To 80
-                                SumPerf = SumPerf + PerformanceData(P_TIME, t)
-                                SumFreq = SumFreq + PerformanceData(P_FREQ, t)
-                                If PerformanceData(P_TIME, t) < MinPerf Then MinPerf = PerformanceData(P_TIME, t)
-                                If PerformanceData(P_TIME, t) > MaxPerf Then MaxPerf = PerformanceData(P_TIME, t)
-                                If PerformanceData(P_FREQ, t) < MinFreq Then MinFreq = PerformanceData(P_FREQ, t)
-                                If PerformanceData(P_FREQ, t) > MaxFreq Then MaxFreq = PerformanceData(P_FREQ, t)
-                                If PerformanceData(P_TIME, t) > 100 Then PerfGreaterThan100 += 1
-                                'Debug.Print(PerformanceData(P_FREQ, t).ToString & " " & PerformanceData(P_TIME, t).ToString)
-                            Next
-                            AvePerf = SumPerf / 60
-                            AveFreq = SumFreq / 60
-                            SumPerf = 0 : SumFreq = 0
-                            For t = 21 To 80
-                                SumPerf = SumPerf + (PerformanceData(P_TIME, t) - AvePerf) ^ 2
-                                SumFreq = SumFreq + (PerformanceData(P_FREQ, t) - AveFreq) ^ 2
-                            Next
-                            StdPerf = (SumPerf / 59) ^ 0.5
-                            StdFreq = (SumFreq / 59) ^ 0.5
-                            Debug.Print("Adv" & chkAdvancedProcessing.CheckState.ToString & " " & NUMBER_OF_CHANNELS & " " & BUFFER_SIZE & " " & SAMPLE_RATE & " Freq (min,max,ave,std): " & MinFreq & " " & MaxFreq & " " & AveFreq & " " & StdFreq & " Perf (min,max,ave,std,#>100): " & MinPerf & " " & MaxPerf & " " & AvePerf & " " & StdPerf & " " & PerfGreaterThan100)
-                            PerfBufferCount = 0
-                        Next
-                    Next
-                Next
-            End Sub
-        *//* TODO ERROR: Skipped EndIfDirectiveTrivia
-        #End If
-        */
+#if QueryPerformance
+        private void btnPerformanceTest_Click(object sender, EventArgs e)
+        {
+            // Cycle through all listed buffer sizes, sampling rates, channel numbers and +/- adv processing
+            // Collect approx 100 points per
+            // Calculate average, stdev, min, max, based on middle 60 points.  Also count P_Time events > 100 
+            // First, ADV off
+            double SumPerf;
+            double SumFreq;
+            double AvePerf;
+            double AveFreq;
+            double StdPerf;
+            double StdFreq;
+            double MinPerf;
+            double MinFreq;
+            double MaxPerf;
+            double MaxFreq;
+            double PerfGreaterThan100;
+            int i;
+            int j;
+            int k;
+            int t;
+            PerformanceData = new double[3, 201];
+            chkAdvancedProcessing.Checked = false;
+            var loopTo = cmbChannels.Items.Count - 1;
+            for (i = 0; i <= loopTo; i++)
+            {
+                cmbChannels.SelectedIndex = i;
+                var loopTo1 = cmbBufferSize.Items.Count - 1;
+                for (j = 0; j <= loopTo1; j++)
+                {
+                    cmbBufferSize.SelectedIndex = j;
+                    var loopTo2 = cmbSampleRate.Items.Count - 1;
+                    for (k = 0; k <= loopTo2; k++)
+                    {
+                        cmbSampleRate.SelectedIndex = k;
+                        btnStartAcquisition_Click(this, EventArgs.Empty);
+                        do
+                            Application.DoEvents();
+                        while (PerfBufferCount < 100);
+                        SumPerf = 0d;
+                        SumFreq = 0d;
+                        MinPerf = 100000d;
+                        MinFreq = 100000d;
+                        MaxPerf = 0d;
+                        MaxFreq = 0d;
+                        PerfGreaterThan100 = 0d;
+                        AvePerf = 0d;
+                        AveFreq = 0d;
+                        StdPerf = 0d;
+                        StdFreq = 0d;
+                        for (t = 21; t <= 80; t++)
+                        {
+                            SumPerf = SumPerf + PerformanceData[P_TIME, t];
+                            SumFreq = SumFreq + PerformanceData[P_FREQ, t];
+                            if (PerformanceData[P_TIME, t] < MinPerf)
+                                MinPerf = PerformanceData[P_TIME, t];
+                            if (PerformanceData[P_TIME, t] > MaxPerf)
+                                MaxPerf = PerformanceData[P_TIME, t];
+                            if (PerformanceData[P_FREQ, t] < MinFreq)
+                                MinFreq = PerformanceData[P_FREQ, t];
+                            if (PerformanceData[P_FREQ, t] > MaxFreq)
+                                MaxFreq = PerformanceData[P_FREQ, t];
+                            if (PerformanceData[P_TIME, t] > 100d)
+                                PerfGreaterThan100 += 1d;
+                            // Debug.Print(PerformanceData(P_FREQ, t).ToString & " " & PerformanceData(P_TIME, t).ToString)
+                        }
+                        AvePerf = SumPerf / 60d;
+                        AveFreq = SumFreq / 60d;
+                        SumPerf = 0d;
+                        SumFreq = 0d;
+                        for (t = 21; t <= 80; t++)
+                        {
+                            SumPerf = SumPerf + Math.Pow(PerformanceData[P_TIME, t] - AvePerf, 2d);
+                            SumFreq = SumFreq + Math.Pow(PerformanceData[P_FREQ, t] - AveFreq, 2d);
+                        }
+                        StdPerf = Math.Pow(SumPerf / 59d, 0.5d);
+                        StdFreq = Math.Pow(SumFreq / 59d, 0.5d);
+                        Debug.Print("Adv" + chkAdvancedProcessing.CheckState.ToString() + " " + NUMBER_OF_CHANNELS + " " + BUFFER_SIZE + " " + SAMPLE_RATE + " Freq (min,max,ave,std): " + MinFreq + " " + MaxFreq + " " + AveFreq + " " + StdFreq + " Perf (min,max,ave,std,#>100): " + MinPerf + " " + MaxPerf + " " + AvePerf + " " + StdPerf + " " + PerfGreaterThan100);
+                        PerfBufferCount = 0;
+                    }
+                }
+            }
+            chkAdvancedProcessing.Checked = true;
+            var loopTo3 = cmbChannels.Items.Count - 1;
+            for (i = 0; i <= loopTo3; i++)
+            {
+                cmbChannels.SelectedIndex = i;
+                var loopTo4 = cmbBufferSize.Items.Count - 1;
+                for (j = 0; j <= loopTo4; j++)
+                {
+                    cmbBufferSize.SelectedIndex = j;
+                    var loopTo5 = cmbSampleRate.Items.Count - 1;
+                    for (k = 0; k <= loopTo5; k++)
+                    {
+                        cmbSampleRate.SelectedIndex = k;
+                        btnStartAcquisition_Click(this, EventArgs.Empty);
+                        do
+                            Application.DoEvents();
+                        while (PerfBufferCount < 100);
+                        SumPerf = 0d;
+                        SumFreq = 0d;
+                        MinPerf = 100000d;
+                        MinFreq = 100000d;
+                        MaxPerf = 0d;
+                        MaxFreq = 0d;
+                        PerfGreaterThan100 = 0d;
+                        AvePerf = 0d;
+                        AveFreq = 0d;
+                        StdPerf = 0d;
+                        StdFreq = 0d;
+                        for (t = 21; t <= 80; t++)
+                        {
+                            SumPerf = SumPerf + PerformanceData[P_TIME, t];
+                            SumFreq = SumFreq + PerformanceData[P_FREQ, t];
+                            if (PerformanceData[P_TIME, t] < MinPerf)
+                                MinPerf = PerformanceData[P_TIME, t];
+                            if (PerformanceData[P_TIME, t] > MaxPerf)
+                                MaxPerf = PerformanceData[P_TIME, t];
+                            if (PerformanceData[P_FREQ, t] < MinFreq)
+                                MinFreq = PerformanceData[P_FREQ, t];
+                            if (PerformanceData[P_FREQ, t] > MaxFreq)
+                                MaxFreq = PerformanceData[P_FREQ, t];
+                            if (PerformanceData[P_TIME, t] > 100d)
+                                PerfGreaterThan100 += 1d;
+                            // Debug.Print(PerformanceData(P_FREQ, t).ToString & " " & PerformanceData(P_TIME, t).ToString)
+                        }
+                        AvePerf = SumPerf / 60d;
+                        AveFreq = SumFreq / 60d;
+                        SumPerf = 0d;
+                        SumFreq = 0d;
+                        for (t = 21; t <= 80; t++)
+                        {
+                            SumPerf = SumPerf + Math.Pow(PerformanceData[P_TIME, t] - AvePerf, 2d);
+                            SumFreq = SumFreq + Math.Pow(PerformanceData[P_FREQ, t] - AveFreq, 2d);
+                        }
+                        StdPerf = Math.Pow(SumPerf / 59d, 0.5d);
+                        StdFreq = Math.Pow(SumFreq / 59d, 0.5d);
+                        Debug.Print("Adv" + chkAdvancedProcessing.CheckState.ToString() + " " + NUMBER_OF_CHANNELS + " " + BUFFER_SIZE + " " + SAMPLE_RATE + " Freq (min,max,ave,std): " + MinFreq + " " + MaxFreq + " " + AveFreq + " " + StdFreq + " Perf (min,max,ave,std,#>100): " + MinPerf + " " + MaxPerf + " " + AvePerf + " " + StdPerf + " " + PerfGreaterThan100);
+                        PerfBufferCount = 0;
+                    }
+                }
+            }
+        }
+#endif
         #endregion
         #region Simulation
         private bool triggerSimulationIfAvailable = false;

@@ -27,14 +27,14 @@ namespace SimpleDyno
             if (chkUseRunDown.Checked == true)
             {
                 grpRunDown.Enabled = true;
-                // Main.frmFit.cmbWhichRDFit.Enabled = True
-                SimpleDyno.frmFit.rdoRunDown.Enabled = true;
+                // Main.FrmFit.cmbWhichRDFit.Enabled = True
+                SimpleDyno.FrmFit.rdoRunDown.Enabled = true;
             }
             else
             {
                 grpRunDown.Enabled = false;
-                SimpleDyno.frmFit.cmbWhichRDFit.Enabled = false;
-                SimpleDyno.frmFit.rdoRunDown.Enabled = false;
+                SimpleDyno.FrmFit.cmbWhichRDFit.Enabled = false;
+                SimpleDyno.FrmFit.rdoRunDown.Enabled = false;
                 blnUsingLoadedRunDownFile = false;
                 lblCoastDownFile.Text = "No file loaded";
             }
@@ -119,24 +119,24 @@ namespace SimpleDyno
                                 rdoFreeRoller.Checked = true;
                                 Interaction.MsgBox("Free Roller Coast Down data found.", MsgBoxStyle.OkOnly);
                                 blnUsingLoadedRunDownFile = true;
-                                SimpleDyno.frmFit.rdoRunDown.Enabled = false;
-                                SimpleDyno.frmFit.cmbWhichRDFit.Enabled = false;
+                                SimpleDyno.FrmFit.rdoRunDown.Enabled = false;
+                                SimpleDyno.FrmFit.cmbWhichRDFit.Enabled = false;
                             }
                             else if (Strings.UCase(TempSplit[3]) == "TRUE")
                             {
                                 rdoRollerAndWheel.Checked = true;
                                 Interaction.MsgBox("Free Roller + Wheel Coast Down data found.", MsgBoxStyle.OkOnly);
                                 blnUsingLoadedRunDownFile = true;
-                                SimpleDyno.frmFit.rdoRunDown.Enabled = false;
-                                SimpleDyno.frmFit.cmbWhichRDFit.Enabled = false;
+                                SimpleDyno.FrmFit.rdoRunDown.Enabled = false;
+                                SimpleDyno.FrmFit.cmbWhichRDFit.Enabled = false;
                             }
                             else
                             {
                                 rdoRollerAndDrivetrain.Checked = true;
                                 Interaction.MsgBox("Roller + Drivetrain Coast Down data found", MsgBoxStyle.OkOnly);
                                 blnUsingLoadedRunDownFile = true;
-                                SimpleDyno.frmFit.rdoRunDown.Enabled = false;
-                                SimpleDyno.frmFit.cmbWhichRDFit.Enabled = false;
+                                SimpleDyno.FrmFit.rdoRunDown.Enabled = false;
+                                SimpleDyno.FrmFit.cmbWhichRDFit.Enabled = false;
                             }
                             lblCoastDownFile.Text = "Using " + RunDownOpenFileDialog.FileName.ToString().Substring(RunDownOpenFileDialog.FileName.ToString().LastIndexOf(@"\") + 1);
                         }

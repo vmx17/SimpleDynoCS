@@ -1,4 +1,6 @@
-﻿using System;
+﻿#define LoadOldPowerRunData
+
+using System;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
@@ -11,8 +13,6 @@ namespace SimpleDyno
     public partial class Fit : Form
     {
         // CHECK - This needs to be reset to 0 for release versions
-        /* TODO ERROR: Skipped DefineDirectiveTrivia */
-//      #define LoadOldPowerRunData
         private string[] AvailableFits = new[] { "Four Parameter", "2nd Order Poly", "3rd Order Poly", "4th Order Poly", "5th Order Poly", "MA Smooth", "MLSQ Linfit", "None" }; // "Test"} ', "Simple Smoothing"}
         private int FitStartPoint = 1;
         private double CurrentSmooth;
@@ -465,15 +465,11 @@ namespace SimpleDyno
                     // This section allows you to run a dummy fit if
                     // if LoadPowerRunData Const is 1
                     // //////////////////////////////////////////////
-                    /* TODO ERROR: Skipped IfDirectiveTrivia
-                    #If LoadOldPowerRunData = 1 Then
-                    *//* TODO ERROR: Skipped DisabledTextTrivia
-                                    'If Main.GearRatio = 999.0 AndAlso inputdialog.FileName = "" Then
-                                    setxyc() 'reads an existing data file for the raw RPM numbers
-                                    'End If
-                    *//* TODO ERROR: Skipped EndIfDirectiveTrivia
-                    #End If
-                    */                // Copy all collected data to fit data
+#if LoadOldPowerRunData
+                    //if (Main.GearRatio == 999.0 && inputdialog.FileName == "")
+                    setxyc(); //reads an existing data file for the raw RPM numbers
+#endif
+                    // Copy all collected data to fit data
                     FitData = new double[37, SimpleDyno.DataPoints + 1];
                     int t;
                     int count;
@@ -487,7 +483,7 @@ namespace SimpleDyno
                     // Always Fit the RPM1 Data
                     FitRPMData();
 
-                    if (SimpleDyno.frmCorrection.chkUseRunDown.Checked == true)
+                    if (SimpleDyno.FrmCorrection.chkUseRunDown.Checked == true)
                     {
                         FitRPMRunDownData();
                     }
@@ -652,7 +648,7 @@ namespace SimpleDyno
                 FitData[SimpleDyno.TORQUE_ROLLER, 1] = 0d; // fy(1) + yoffset
                 FitData[SimpleDyno.POWER, 1] = 0d; // x(1) + xoffset
 
-                if (SimpleDyno.frmCorrection.chkUseRunDown.Checked && blnCoastDownDownFit)
+                if (SimpleDyno.FrmCorrection.chkUseRunDown.Checked && blnCoastDownDownFit)
                     CreateCoastDownData();
                 prgFit.Value = prgFit.Maximum;
                 lblProgress.Text = "Done";
@@ -989,46 +985,46 @@ namespace SimpleDyno
             {
                 DataOutputFile.WriteLine("No_Baud_Rate_Selected");
             }
-            DataOutputFile.WriteLine("Car_Mass: " + SimpleDyno.frmDyno.CarMass.ToString() + " grams");
-            DataOutputFile.WriteLine("Frontal_Area: " + SimpleDyno.frmDyno.FrontalArea.ToString() + " mm2");
-            DataOutputFile.WriteLine("Drag_Coefficient: " + SimpleDyno.frmDyno.DragCoefficient.ToString());
-            DataOutputFile.WriteLine("Gear_Ratio: " + SimpleDyno.GearRatio.ToString());
-            DataOutputFile.WriteLine("Wheel_Diameter: " + SimpleDyno.frmDyno.WheelDiameter.ToString() + " mm");
-            DataOutputFile.WriteLine("Roller_Diameter: " + SimpleDyno.frmDyno.RollerDiameter.ToString() + " mm");
-            DataOutputFile.WriteLine("Roller_Wall_Thickness: " + SimpleDyno.frmDyno.RollerWallThickness.ToString() + " mm");
-            DataOutputFile.WriteLine("Roller_Mass: " + SimpleDyno.frmDyno.RollerMass.ToString() + " grams");
-            DataOutputFile.WriteLine("Axle_Diameter: " + SimpleDyno.frmDyno.AxleDiameter.ToString() + " mm");
-            DataOutputFile.WriteLine("Axle_Mass: " + SimpleDyno.frmDyno.AxleMass.ToString() + " grams");
-            DataOutputFile.WriteLine("End_Cap_Mass: " + SimpleDyno.frmDyno.EndCapMass.ToString() + " grams");
-            DataOutputFile.WriteLine("Extra_Diameter: " + SimpleDyno.frmDyno.ExtraDiameter.ToString() + " mm");
-            DataOutputFile.WriteLine("Extra_Wall_Thickness: " + SimpleDyno.frmDyno.ExtraWallThickness.ToString() + " mm");
-            DataOutputFile.WriteLine("Extra_Mass: " + SimpleDyno.frmDyno.ExtraMass.ToString() + " grams");
-            DataOutputFile.WriteLine("Target_MOI: " + SimpleDyno.IdealMomentOfInertia.ToString() + " kg/m2");
-            DataOutputFile.WriteLine("Actual_MOI: " + SimpleDyno.DynoMomentOfInertia.ToString() + " kg/m2");
-            DataOutputFile.WriteLine("Target_Roller_Mass: " + SimpleDyno.IdealRollerMass.ToString() + " grams");
-            DataOutputFile.WriteLine("Signals_Per_RPM1: " + SimpleDyno.frmDyno.SignalsPerRPM.ToString());
-            DataOutputFile.WriteLine("Signals_Per_RPM2: " + SimpleDyno.frmDyno.SignalsPerRPM2.ToString());
-            DataOutputFile.WriteLine("Channel_1_Threshold: " + SimpleDyno.HighSignalThreshold.ToString());
-            DataOutputFile.WriteLine("Channel_2_Threshold: " + SimpleDyno.HighSignalThreshold2.ToString());
-            DataOutputFile.WriteLine("Run_RPM_Threshold: " + SimpleDyno.PowerRunThreshold.ToString());
-            DataOutputFile.WriteLine("Run_Spike_Removal_Threshold: " + PowerRunSpikeLevel.ToString());
-            DataOutputFile.WriteLine("Curve_Fit_Model: " + cmbWhichFit.SelectedItem.ToString());
-            DataOutputFile.WriteLine("Coast_Down?_Roller?_Wheel?_Drivetrain?: " + rdoRunDown.Enabled.ToString() + " " + SimpleDyno.frmCorrection.rdoFreeRoller.Checked.ToString() + " " + SimpleDyno.frmCorrection.rdoRollerAndWheel.Checked.ToString() + " " + SimpleDyno.frmCorrection.rdoRollerAndDrivetrain.Checked.ToString());
+            DataOutputFile.WriteLine($"Car_Mass: {SimpleDyno.FrmDyno.CarMass} grams");
+            DataOutputFile.WriteLine($"Frontal_Area: {SimpleDyno.FrmDyno.FrontalArea} mm2");
+            DataOutputFile.WriteLine($"Drag_Coefficient: {SimpleDyno.FrmDyno.DragCoefficient}");
+            DataOutputFile.WriteLine($"Gear_Ratio: {SimpleDyno.GearRatio}");
+            DataOutputFile.WriteLine($"Wheel_Diameter: {SimpleDyno.FrmDyno.WheelDiameter} mm");
+            DataOutputFile.WriteLine($"Roller_Diameter: {SimpleDyno.FrmDyno.RollerDiameter} mm");
+            DataOutputFile.WriteLine($"Roller_Wall_Thickness: {SimpleDyno.FrmDyno.RollerWallThickness} mm");
+            DataOutputFile.WriteLine($"Roller_Mass: {SimpleDyno.FrmDyno.RollerMass} grams");
+            DataOutputFile.WriteLine($"Axle_Diameter: {SimpleDyno.FrmDyno.AxleDiameter} mm");
+            DataOutputFile.WriteLine($"Axle_Mass: {SimpleDyno.FrmDyno.AxleMass} grams");
+            DataOutputFile.WriteLine($"End_Cap_Mass: {SimpleDyno.FrmDyno.EndCapMass} grams");
+            DataOutputFile.WriteLine($"Extra_Diameter: {SimpleDyno.FrmDyno.ExtraDiameter} mm");
+            DataOutputFile.WriteLine($"Extra_Wall_Thickness: {SimpleDyno.FrmDyno.ExtraWallThickness} mm");
+            DataOutputFile.WriteLine($"Extra_Mass: {SimpleDyno.FrmDyno.ExtraMass} grams");
+            DataOutputFile.WriteLine($"Target_MOI: {SimpleDyno.IdealMomentOfInertia} kg/m2");
+            DataOutputFile.WriteLine($"Actual_MOI: {SimpleDyno.DynoMomentOfInertia} kg/m2");
+            DataOutputFile.WriteLine($"Target_Roller_Mass: " + SimpleDyno.IdealRollerMass.ToString() + " grams");
+            DataOutputFile.WriteLine($"Signals_Per_RPM1: {SimpleDyno.FrmDyno.SignalsPerRPM}");
+            DataOutputFile.WriteLine($"Signals_Per_RPM2: {SimpleDyno.FrmDyno.SignalsPerRPM2}");
+            DataOutputFile.WriteLine($"Channel_1_Threshold: {SimpleDyno.HighSignalThreshold}");
+            DataOutputFile.WriteLine($"Channel_2_Threshold: {SimpleDyno.HighSignalThreshold2}");
+            DataOutputFile.WriteLine($"Run_RPM_Threshold: {SimpleDyno.PowerRunThreshold}");
+            DataOutputFile.WriteLine($"Run_Spike_Removal_Threshold: {PowerRunSpikeLevel}");
+            DataOutputFile.WriteLine($"Curve_Fit_Model: {cmbWhichFit.SelectedItem}");
+            DataOutputFile.WriteLine($"Coast_Down?_Roller?_Wheel?_Drivetrain?: {rdoRunDown.Enabled} {SimpleDyno.FrmCorrection.rdoFreeRoller.Checked} {SimpleDyno.FrmCorrection.rdoRollerAndWheel.Checked} {SimpleDyno.FrmCorrection.rdoRollerAndDrivetrain.Checked}");
             if (Correction.blnUsingLoadedRunDownFile == true)
             {
-                DataOutputFile.WriteLine("Coast_Down_File_Loaded: " + Correction.RunDownOpenFileDialog.FileName);
+                DataOutputFile.WriteLine($"Coast_Down_File_Loaded: {Correction.RunDownOpenFileDialog.FileName}");
             }
             else
             {
-                DataOutputFile.WriteLine("Coast_Down_Fit_Model: " + cmbWhichRDFit?.SelectedItem?.ToString());
+                DataOutputFile.WriteLine($"Coast_Down_Fit_Model: {cmbWhichRDFit.SelectedItem}");
             }
 
-            DataOutputFile.WriteLine("Voltage_Smoothing_%: " + txtVoltageSmooth.Text);
-            DataOutputFile.WriteLine("Current_Smoothing_%: " + txtCurrentSmooth.Text);
+            DataOutputFile.WriteLine($"Voltage_Smoothing_%: {txtVoltageSmooth.Text}");
+            DataOutputFile.WriteLine($"Current_Smoothing_%: {txtCurrentSmooth.Text}");
             DataOutputFile.WriteLine(Constants.vbCrLf);
             DataOutputFile.WriteLine("PRIMARY_CHANNEL_CURVE_FIT_DATA");
-            DataOutputFile.WriteLine("NUMBER_OF_POINTS_FIT" + " " + Information.UBound(FitData, 2).ToString());
-            DataOutputFile.WriteLine("STARTING_POINT" + " " + FitStartPoint.ToString());
+            DataOutputFile.WriteLine($"NUMBER_OF_POINTS_FIT {Information.UBound(FitData, 2)}");
+            DataOutputFile.WriteLine($"STARTING_POINT {FitStartPoint}");
 
             // Create the column headings string based on the Data structure 
             // Only Primary SI units of the values are written
@@ -1067,11 +1063,11 @@ namespace SimpleDyno
                 FitData[SimpleDyno.TORQUE_WHEEL, Count] = FitData[SimpleDyno.POWER, Count] / FitData[SimpleDyno.RPM1_WHEEL, Count];
                 FitData[SimpleDyno.TORQUE_MOTOR, Count] = FitData[SimpleDyno.POWER, Count] / FitData[SimpleDyno.RPM1_MOTOR, Count];
                 // Calculated Corrected values for power and torque if use rundown is selected
-                if (SimpleDyno.frmCorrection.chkUseRunDown.Checked)
+                if (SimpleDyno.FrmCorrection.chkUseRunDown.Checked)
                 {
                     // Select how the coast down values are to be applied
                     // If its a freeroller rundown, just add torque to the roller torque and continue as usual.
-                    if (SimpleDyno.frmCorrection.rdoFreeRoller.Checked)
+                    if (SimpleDyno.FrmCorrection.rdoFreeRoller.Checked)
                     {
                         FitData[SimpleDyno.CORRECTED_TORQUE_ROLLER, Count] = FitData[SimpleDyno.TORQUE_ROLLER, Count] + FitData[SimpleDyno.TORQUE_COASTDOWN, Count];
                         FitData[SimpleDyno.CORRECTED_POWER_ROLLER, Count] = FitData[SimpleDyno.CORRECTED_TORQUE_ROLLER, Count] * ((FitData[SimpleDyno.RPM1_ROLLER, Count] + FitData[SimpleDyno.RPM1_ROLLER, Count - 1]) / 2d);
@@ -1081,7 +1077,7 @@ namespace SimpleDyno
                         FitData[SimpleDyno.CORRECTED_TORQUE_MOTOR, Count] = FitData[SimpleDyno.CORRECTED_POWER_ROLLER, Count] / FitData[SimpleDyno.RPM1_MOTOR, Count];
                     }
                     // if its a roller plus wheel leave roller alone, adjust wheel and back calc to motor
-                    if (SimpleDyno.frmCorrection.rdoRollerAndWheel.Checked)
+                    if (SimpleDyno.FrmCorrection.rdoRollerAndWheel.Checked)
                     {
                         // Add corrected torque to wheel
                         FitData[SimpleDyno.CORRECTED_TORQUE_WHEEL, Count] = FitData[SimpleDyno.TORQUE_ROLLER, Count] + FitData[SimpleDyno.TORQUE_COASTDOWN, Count];
@@ -1094,7 +1090,7 @@ namespace SimpleDyno
                         FitData[SimpleDyno.CORRECTED_POWER_ROLLER, Count] = FitData[SimpleDyno.POWER, Count];
                     }
                     // if its a roller plus drive train leave roller and wheel alone and apply only to motor
-                    if (SimpleDyno.frmCorrection.rdoRollerAndDrivetrain.Checked)
+                    if (SimpleDyno.FrmCorrection.rdoRollerAndDrivetrain.Checked)
                     {
                         // temporarily add torque to roller
                         FitData[SimpleDyno.CORRECTED_TORQUE_ROLLER, Count] = FitData[SimpleDyno.TORQUE_ROLLER, Count] + FitData[SimpleDyno.TORQUE_COASTDOWN, Count];
@@ -2096,12 +2092,12 @@ namespace SimpleDyno
                 {
                     if (chkAddOrNew.Checked == false)
                     {
-                        SimpleDyno.frmAnalysis.btnClearOverlay_Click_1(this, EventArgs.Empty);
+                        SimpleDyno.FrmAnalysis.btnClearOverlay_Click_1(this, EventArgs.Empty);
                     }
-                    SimpleDyno.frmAnalysis.WindowState = FormWindowState.Normal;
-                    SimpleDyno.frmAnalysis.OpenFileDialog1.FileName = SimpleDyno.LogPowerRunDataFileName;
-                    SimpleDyno.frmAnalysis.btnAddOverlayFile_Click_1(this, EventArgs.Empty);
-                    SimpleDyno.frmAnalysis.ShowDialog();
+                    SimpleDyno.FrmAnalysis.WindowState = FormWindowState.Normal;
+                    SimpleDyno.FrmAnalysis.OpenFileDialog1.FileName = SimpleDyno.LogPowerRunDataFileName;
+                    SimpleDyno.FrmAnalysis.btnAddOverlayFile_Click_1(this, EventArgs.Empty);
+                    SimpleDyno.FrmAnalysis.ShowDialog();
                 }
             }
             else
