@@ -78,15 +78,10 @@ namespace SimpleDyno
 
             InitializeComponent();
 
-            //Program.MainI.Load += Form1_Load;
-            //Program.MainI.Closed += Form1_Closed;
-            //Program.MainI.Activated += Main_Activated;
-            //Program.MainI.Shown += Form1_Shown;
-
-            Program.MainI.Load += (object? sender, EventArgs e) => Form1_Load(sender, e);
-            Program.MainI.Closed += (object? sender, EventArgs e) => Form1_Closed(sender, e);
-            Program.MainI.Activated += (object? sender, EventArgs e) => Main_Activated(sender, e);
-            Program.MainI.Shown += (object? sender, EventArgs e) => Form1_Shown(sender, e);
+            //Program.MainI.Load += (object sender, EventArgs e) => SimpleDyno_Load(sender, e);
+            //Program.MainI.Closed += (object sender, FormClosedEventArgs e) => SimpleDyno_FormClosed(sender, e);
+            //Program.MainI.Activated += (object sender, EventArgs e) => SimpleDyno_Activated(sender, e);
+            //Program.MainI.Shown += (object sender, EventArgs e) => SimpleDyno_Shown(sender, e);
             //This call is required by the Windows Form Designer.
         }
         #endregion
@@ -537,7 +532,7 @@ namespace SimpleDyno
 
         #endregion
         #region Form Load, WndProc, Button and Trackbar Events, Delgates and Close
-        private void Form1_Load(object sender, EventArgs e)
+        private void SimpleDyno_Load(object sender, EventArgs e)
         {
 #if QueryPerformance
             btnPerformanceTest.Visible = true;
@@ -611,11 +606,11 @@ namespace SimpleDyno
             RunSimulation = true;
             serialSimuThread.Start();
         }
-        private void Form1_Shown(object sender, EventArgs e)
+        private void SimpleDyno_Shown(object sender, EventArgs e)
         {
             Formloaded = true;
         }
-        private void Form1_Closed(object sender, EventArgs e)
+        private void SimpleDyno_FormClosed(object sender, FormClosedEventArgs e)
         {
             SaveParametersToFile();
             btnClose_Click(this, EventArgs.Empty);
@@ -1064,7 +1059,7 @@ namespace SimpleDyno
 
         }
 
-        private void Main_Activated(object sender, EventArgs e)
+        private void SimpleDyno_Activated(object sender, EventArgs e)
         {
             // Activate the subforms to bring them foreground when main form is brought foreground
             // This would be endless loop if not limited with a timer

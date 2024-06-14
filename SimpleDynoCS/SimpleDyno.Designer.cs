@@ -34,6 +34,7 @@ namespace SimpleDyno
         [DebuggerStepThrough()]
         private void InitializeComponent()
         {
+            SuspendLayout();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(SimpleDyno));
             SaveFileDialog1 = new System.Windows.Forms.SaveFileDialog();
             SelectFolderDialog = new System.Windows.Forms.FolderBrowserDialog();
@@ -572,7 +573,11 @@ namespace SimpleDyno
             MaximizeBox = false;
             Name = "SimpleDyno";
             StartPosition = FormStartPosition.CenterScreen;
-            Text = "SimpleDyno by Vmx17";
+            Text = "SimpleDynoCS by Vmx17";
+            Activated += SimpleDyno_Activated;
+            FormClosed += SimpleDyno_FormClosed;
+            Load += SimpleDyno_Load;
+            Shown += SimpleDyno_Shown;
             ResumeLayout(false);
             PerformLayout();
         }
